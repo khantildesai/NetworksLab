@@ -21,15 +21,25 @@ int main(int argc, char *argv[]){
     uint16_t newPortNum = htons(portNum);
     uint64_t newAddr = htons(ip);
     struct in_addr addrStruct;
-    addrStruct.s_addr = newAddr;
+    addrStruct.s_addr = htonl(INADDR_ANY);
     struct sockaddr_in socketAddr;
     socketAddr.sin_family = AF_INET;
     socketAddr.sin_port = (unsigned short) newPortNum;
     socketAddr.sin_addr = addrStruct;
-
+    
     //pointer to struct
     struct sockaddr_in *addrPtr;
     addrPtr = &socketAddr;
     int bindSucc = bind(FileDescriptor, (const struct sockaddr *)addrPtr, sizeof(struct sockaddr));
     printf("%d \n", bindSucc);
+
+    //using the recvfrom function
+    char buffer[200];
+    struct sockaddr_storage storageAddress;
+    struct sockaddr_storage *storageAddressPtr;
+    storageAddressPtr = &storageAddress;
+    socklen_t addressSize = sizeof(storageAddress);
+    socklen_t *addressSizePtr = &addressSize;
+    int bytesReceived = recvfrom(FileDescriptor, buffer, 200, 0, (struct sockaddr *) storageAddressPtr, addressSizePtr);
+    printf("function called \n %d \n", bytesReceived);
 }
