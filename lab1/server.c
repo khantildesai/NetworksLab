@@ -24,7 +24,7 @@ int main(int argc, char *argv[]){
     addrStruct.s_addr = newAddr;
     struct sockaddr_in socketAddr;
     socketAddr.sin_family = AF_INET;
-    socketAddr.sin_port = (unsigned short) portNum;
+    socketAddr.sin_port = (unsigned short) newPortNum;
     socketAddr.sin_addr = addrStruct;
 
     //pointer to struct
