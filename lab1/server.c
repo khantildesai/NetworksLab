@@ -13,18 +13,12 @@ int main(int argc, char *argv[]){
     int FileDescriptor = socket(AF_INET, SOCK_DGRAM, 0);
     printf("the file descriptor is: %d \n", FileDescriptor);
 
-    //set up structs
-    unsigned char buf[sizeof(struct in6_addr)];
-    long unsigned int ip = inet_pton(AF_INET, "128:100:13:180", buf);
-
     //making sockaddr_in struct
-    uint16_t newPortNum = htons(portNum);
-    uint64_t newAddr = htons(ip);
     struct in_addr addrStruct;
     addrStruct.s_addr = htonl(INADDR_ANY);
     struct sockaddr_in socketAddr;
     socketAddr.sin_family = AF_INET;
-    socketAddr.sin_port = (unsigned short) newPortNum;
+    socketAddr.sin_port = htons(portNum);
     socketAddr.sin_addr = addrStruct;
     
     //pointer to struct

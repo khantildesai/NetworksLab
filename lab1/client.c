@@ -66,7 +66,7 @@ int main(int argc, char *argv[]){
 
     //creating other data for send to function
     const char FTPChar[] = "ftp";
-    unsigned int MessageLen = 1;
+    unsigned int MessageLen = 5;
     int flags = 0;
     
     //setup structs for sockaddr_in struct
