@@ -42,13 +42,26 @@ int main(int argc, char *argv[]){
     socklen_t addressSize = sizeof(storageAddress);
     socklen_t *addressSizePtr = &addressSize;
     printf("Server receiving on port %d.\n", portNum);
-    recvfrom(FileDescriptor, buffer, 200, 0, (struct sockaddr *) storageAddressPtr, addressSizePtr);
 
-    //checking if it is yes or no to send to the client
-    if(strcmp(buffer,"ftp") == 0){
-        sendto(FileDescriptor, "yes", strlen("yes"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+    while(1){
+        recvfrom(FileDescriptor, buffer, 200, 0, (struct sockaddr *) storageAddressPtr, addressSizePtr);
+
+        //checking if it is yes or no to send to the client
+        if(strcmp(buffer,"ftp") == 0){
+            sendto(FileDescriptor, "yes", strlen("yes"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+        }
+        else{
+            sendto(FileDescriptor, "no", strlen("no"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+        }
+
     }
-    else{
-        sendto(FileDescriptor, "no", strlen("no"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
-    }
+    // recvfrom(FileDescriptor, buffer, 200, 0, (struct sockaddr *) storageAddressPtr, addressSizePtr);
+
+    // //checking if it is yes or no to send to the client
+    // if(strcmp(buffer,"ftp") == 0){
+    //     sendto(FileDescriptor, "yes", strlen("yes"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+    // }
+    // else{
+    //     sendto(FileDescriptor, "no", strlen("no"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+    // }
 }
