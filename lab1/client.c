@@ -122,7 +122,7 @@ int main(int argc, char *argv[]){
 
     if (strcmp(buffer, "yes") == 0){
         close(FileDescriptor);
-        printf("A file transfer can start.\n");
+        printf("A file transfer can start\n");
     }
     else{
         close(FileDescriptor);
