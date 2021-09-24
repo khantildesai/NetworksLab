@@ -1,17 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <ctype.h>
 
 int main(int argc, char *argv[]){
     if (argc != 2){ //if less/more than 1 arg given; return
         return 1;
     }
     int portNum = atoi(argv[1]);
-    printf("the port number is: %d \n", portNum);
 
     int FileDescriptor = socket(AF_INET, SOCK_DGRAM, 0);
-    printf("the file descriptor is: %d \n", FileDescriptor);
 
     //making sockaddr_in struct
     struct in_addr addrStruct;
@@ -24,8 +27,12 @@ int main(int argc, char *argv[]){
     //pointer to struct
     struct sockaddr_in *addrPtr;
     addrPtr = &socketAddr;
+
+    //bind check
     int bindSucc = bind(FileDescriptor, (const struct sockaddr *)addrPtr, sizeof(struct sockaddr));
-    printf("%d \n", bindSucc);
+    if(bindSucc == -1){
+        printf("bind failed\n");
+    }
 
     //using the recvfrom function
     char buffer[200];
@@ -34,6 +41,14 @@ int main(int argc, char *argv[]){
     storageAddressPtr = &storageAddress;
     socklen_t addressSize = sizeof(storageAddress);
     socklen_t *addressSizePtr = &addressSize;
-    int bytesReceived = recvfrom(FileDescriptor, buffer, 200, 0, (struct sockaddr *) storageAddressPtr, addressSizePtr);
-    printf("function called \n %d \n", bytesReceived);
+    printf("Server receiving on port %d.\n", portNum);
+    recvfrom(FileDescriptor, buffer, 200, 0, (struct sockaddr *) storageAddressPtr, addressSizePtr);
+
+    //checking if it is yes or no to send to the client
+    if(strcmp(buffer,"ftp") == 0){
+        sendto(FileDescriptor, "yes", strlen("yes"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+    }
+    else{
+        sendto(FileDescriptor, "no", strlen("no"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+    }
 }
