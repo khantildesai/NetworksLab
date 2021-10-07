@@ -116,7 +116,14 @@ int main(int argc, char *argv[]){
     }
     
     //make packets
+    printf("gona make packets\n");
     packet* packets = packetMaker(fPtr, size, fname);
+    int numPackets = packets[0].total_frag;
+    printf("num packets: %d\n", numPackets);
+    for (int i = 0; i < numPackets; i++){
+        packet curr = packets[i];
+	printf("i can iterate\n");
+    }
     free(packets);
 
     if (strcmp(CharArr, "yes") == 0){
@@ -136,7 +143,6 @@ packet* packetMaker(FILE* fptr, int size, char* filename){
 
     int numPackets = size/1000 + (size%1000 != 0);
     
-    printf("till here no errors\n");
     packet* Packets = (packet*)calloc(numPackets, sizeof(packet));
     
     int sizeLeftToCopy = size;
@@ -146,7 +152,6 @@ packet* packetMaker(FILE* fptr, int size, char* filename){
 	    int lenSet = sizeLeftToCopy%1000;
 	    packet temp = {numPackets, packetIter, lenSet, filename};
 	    memset(temp.filedata, 0, 1000);
-	    printf("till here also no errors\n");
 	    fgets(temp.filedata, lenSet, nextPacket);
 	    Packets[packetIter] = temp;
 	    sizeLeftToCopy -= lenSet;
