@@ -8,9 +8,9 @@
 #include <time.h>
 
 typedef struct packet {
-    unsigned int total_frag;
-    unsigned int frag_no;
-    unsigned int size;
+    unsigned int total_frag;    //total number of fragments of the file.
+    unsigned int frag_no;   //sequence number.
+    unsigned int size;  //size of data in range from 0 to 1000.
     char* filename;
     char filedata[1000];
 } packet;
