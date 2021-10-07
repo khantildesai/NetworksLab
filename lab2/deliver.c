@@ -8,9 +8,9 @@
 #include <time.h>
 
 typedef struct packet {
-    unsigned int total_frag;
-    unsigned int frag_no;
-    unsigned int size;
+    unsigned int total_frag;    //total number of fragments of the file.
+    unsigned int frag_no;   //sequence number.
+    unsigned int size;  //size of data in range from 0 to 1000.
     char* filename;
     char filedata[1000];
 } packet;
@@ -73,8 +73,7 @@ int main(int argc, char *argv[]){
 
 
     //time structs setup for transfer time measurement
-    time_t start_t, end_t;
-    double diff_t;
+    clock_t t;
     
     //creating socket for client
     int FileDescriptor = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -93,7 +92,7 @@ int main(int argc, char *argv[]){
     int ByteCount;
 
     //send ftp to server
-    time(&start_t);
+    t = clock();
     ByteCount = sendto(FileDescriptor, "ftp", strlen("ftp"), 0, (struct sockaddr *) &server_addr, sizeof(server_addr));
     if (ByteCount == -1){
         printf("there was a sendto error!\n");
@@ -105,10 +104,10 @@ int main(int argc, char *argv[]){
 
     //recieve the message
     ByteCount = recvfrom(FileDescriptor, CharArr, CharArrSize, 0, (struct sockaddr *) &server_addr, &server_addr_size);
-    time(&end_t);
+    t = clock() - t;
     if (ByteCount != -1){
-        diff_t = difftime(end_t, start_t);
-	printf("the round trip time is: %f\n", diff_t);
+        double rtt = ((double)t)/CLOCKS_PER_SEC;
+        printf("round-trip time from the client to the server is %f seconds.\n", rtt);
     }
     if (ByteCount == -1){
         printf("there was a recvfrom error!\n");
