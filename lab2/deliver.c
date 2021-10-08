@@ -17,6 +17,8 @@ typedef struct packet {
 
 packet* packetMaker(FILE* fptr, int size, char* filename);
 
+void serialize(packet myPacket, char* serialArr);
+
 int main(int argc, char *argv[]){
     if (argc != 3){//if less/more than two arg given return 1
         return 1;
@@ -115,13 +117,31 @@ int main(int argc, char *argv[]){
     }
     
     //make packets
-    printf("gona make packets\n");
     packet* packets = packetMaker(fPtr, size, fname);
     int numPackets = packets[0].total_frag;
-    printf("num packets: %d\n", numPackets);
+
+    //send packets
     for (int i = 0; i < numPackets; i++){
+	//getting and preparing packet
+	printf("sending packets %d\n", i);
         packet curr = packets[i];
-	printf("i can iterate\n");
+        char myArr[1500];
+	serialize(curr, myArr);
+        
+        printf("array to send is: %c\n", myArr[4]);
+        
+	//sending packet
+        ByteCount = sendto(FileDescriptor, myArr, 1500, 0, (struct sockaddr *) &server_addr, sizeof(server_addr));
+        printf("num bytes sent: %d\n", ByteCount);
+	if (ByteCount == -1){
+            printf("there was a sendto error!\n");
+	    return 1;
+        }
+
+	//wait 1 sec
+	sleep(1);
+
+	//check for reply
     }
     free(packets);
 
@@ -142,29 +162,48 @@ packet* packetMaker(FILE* fptr, int size, char* filename){
 
     int numPackets = size/1000 + (size%1000 != 0);
     
-    packet* Packets = (packet*)calloc(numPackets, sizeof(packet));
-    
+    packet* Packets = calloc(numPackets, sizeof(packet));
+     
     int sizeLeftToCopy = size;
     for(int packetIter = 0; packetIter < numPackets; packetIter+=1){
         if (sizeLeftToCopy < 1000){
 	    //copy only modulo len
 	    int lenSet = sizeLeftToCopy%1000;
 	    packet temp = {numPackets, packetIter, lenSet, filename};
+	    //temp.filename[199] = '\0';
 	    memset(temp.filedata, 0, 1000);
 	    fgets(temp.filedata, lenSet, nextPacket);
 	    Packets[packetIter] = temp;
 	    sizeLeftToCopy -= lenSet;
 	}
 	else{
+	    static int iter = 0;
+	    iter++;
 	    packet temp = {numPackets, packetIter, 1000, filename};
+	    //strcpy(temp.filename, filename);
+	    //temp.filename[199] = '\0';
 	    memset(temp.filedata, 0, 1000);
 	    fgets(temp.filedata, 1000, nextPacket);
 	    Packets[packetIter] = temp;
-	    nextPacket += 1000;
+	    //nextPacket += 1000;
+	    fseek(nextPacket, 1000, SEEK_CUR);
 	    sizeLeftToCopy -= 1000;
 	}
     }
 
     return Packets;
+}
+
+void serialize(packet myPacket, char* serialArr){
+    memcpy(serialArr, &(myPacket.total_frag), 4);
+    serialArr[4] = ':';
+    memcpy(serialArr + 5, &(myPacket.frag_no), 4);
+    serialArr[9] = ':';
+    memcpy(serialArr + 10, &(myPacket.size), 4);
+    serialArr[14] = ':';
+    memcpy(serialArr + 15, &(myPacket.filename), strlen(myPacket.filename));
+    serialArr[15 + strlen(myPacket.filename)];
+    memcpy(serialArr + 16 + strlen(myPacket.filename), &(myPacket.filedata), 1000);
+    serialArr[1016 + strlen(myPacket.filename)] = '\0';
 }
 

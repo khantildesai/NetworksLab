@@ -16,7 +16,7 @@ typedef struct packet {
     char filedata[1000];
 } packet;
 
-packet deSerialize(char* serialArr);
+packet deSerialize(packet myPacket, char* serialArr);
 
 int main(int argc, char *argv[]){
     if (argc != 2){ //if less/more than 1 arg given; return
@@ -61,48 +61,23 @@ int main(int argc, char *argv[]){
             sendto(FileDescriptor, "yes", strlen("yes"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
         }
         else{
-	    printf("should be colon %c\n", buffer[9]);
-            packet curr = deSerialize(buffer);
-	    printf("should be colon: %c", buffer[15]);
-	    sendto(FileDescriptor, "no", strlen("no"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+	    printf("message colon: %c\n", buffer[50]);
+	    printf("recieved file packet!!!\n");
+            sendto(FileDescriptor, "no", strlen("no"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
         }
 
     }
 }
 
-packet deSerialize(char* serialArr){
-    //packet to return
+packet deSerialize(packet myPacket, char* serialArr){
     packet toReturn;
-    
-    //total_frag
-    memcpy(&toReturn.total_frag, serialArr, 4);
-    printf("copied total_frag\n");
-    
-    //frag_no
-    memcpy(&toReturn.frag_no, serialArr + 5, 4);
-    printf("copied frag_no\n");
-    
-    //size
-    memcpy(&toReturn.size, serialArr + 10, 4);
-    printf("copied size\n");
-    
-    //filename
-    //char* fileNameInput = strtok(serialArr + 15, ":");
-    //int fileNameSize = strlen(fileNameInput);
-    //char* newfilename = malloc(fileNameSize);
-    memcpy(&toReturn.filename, serialArr + 15, 11);
-    printf("copied filename\n");
-    
-    //filedata
-    //char* filedataPtr = strtok(serialArr + 27, "\0");
-    memcpy(&toReturn.filedata, serialArr + 27, 1000);
-    printf("copied filedata\n");
-
+    char* totalFragArr = strtok(serialArr, ':');
+    memcpy(toReturn.total_frag, totalFragArr, 4);
     //toReturn.total_frag = strtok(serialArr, ':');
-    //toReturn.frag_no = strtok(NULL, ':');
-    //toReturn.size = strtok(NULL, ':');
-    //toReturn.filename = strtok(NULL, ':');
-    //toReturn.filedata = strtok(NULL, '\0');
+    toReturn.frag_no = strtok(NULL, ':');
+    toReturn.size = strtok(NULL, ':');
+    toReturn.filename = strtok(NULL, ':');
+    toReturn.filedata = strtok(NULL, '\0');
     return toReturn;
 }
 
