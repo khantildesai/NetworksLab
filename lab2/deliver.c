@@ -11,8 +11,8 @@ typedef struct packet {
     unsigned int total_frag;    //total number of fragments of the file.
     unsigned int frag_no;   //sequence number.
     unsigned int size;  //size of data in range from 0 to 1000.
-    char* filename;
-    char filedata[1000];
+    char filename[100];
+    char filedata[88];
 } packet;
 
 packet* packetMaker(FILE* fptr, int size, char* filename);
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]){
 
     //openning file to get len
     FILE* fPtr;
-    fPtr = fopen(fname, "r");
+    fPtr = fopen(fname, "rb");
     fseek(fPtr, 0, SEEK_END);
     int size = ftell(fPtr);
     fseek(fPtr, 0, SEEK_SET);
@@ -116,6 +116,15 @@ int main(int argc, char *argv[]){
         return 1;
     }
     
+    if (strcmp(CharArr, "yes") == 0){
+        //close(FileDescriptor);
+        printf("A file transfer can start\n");
+    }
+    else{
+        //close(FileDescriptor);
+        return 0;
+    }
+    
     //make packets
     packet* packets = packetMaker(fPtr, size, fname);
     int numPackets = packets[0].total_frag;
@@ -123,31 +132,35 @@ int main(int argc, char *argv[]){
     //send packets
     for (int i = 0; i < numPackets; i++){
 	//getting and preparing packet
-	printf("sending packets %d\n", i);
         packet curr = packets[i];
-        char myArr[1500];
+        char myArr[200];
 	serialize(curr, myArr);
-        
-        printf("array to send is: %c\n", myArr[4]);
-        
+         
 	//sending packet
-        ByteCount = sendto(FileDescriptor, myArr, 1500, 0, (struct sockaddr *) &server_addr, sizeof(server_addr));
-        printf("num bytes sent: %d\n", ByteCount);
+        ByteCount = sendto(FileDescriptor, myArr, 200, 0, (struct sockaddr *) &server_addr, sizeof(server_addr));
+        
 	if (ByteCount == -1){
             printf("there was a sendto error!\n");
 	    return 1;
         }
 
-	//wait 1 sec
-	sleep(1);
+	//wait 0.2 sec
+	sleep(0.2);
 
-	//check for reply
+	memset(CharArr, 0, CharArrSize); //clearn buffer
+        
+	//recieve the message
+        ByteCount = recvfrom(FileDescriptor, CharArr, CharArrSize, 0, (struct sockaddr *) &server_addr, &server_addr_size);
+        
+        if (strcmp(CharArr, "recieved") != 0){
+            i--;
+        }
     }
     free(packets);
-
+    
     if (strcmp(CharArr, "yes") == 0){
         close(FileDescriptor);
-        printf("A file transfer can start\n");
+    //    printf("A file transfer can start\n");
     }
     else{
         close(FileDescriptor);
@@ -159,35 +172,50 @@ int main(int argc, char *argv[]){
 
 packet* packetMaker(FILE* fptr, int size, char* filename){
     FILE* nextPacket = fptr;
+    char* buffer = 0;
+    buffer = (char*) malloc((size + 1)*sizeof(char));
+    fread(buffer, 1, size + 1, fptr);
 
-    int numPackets = size/1000 + (size%1000 != 0);
+    int numPackets = size/88 + (size%88 != 0);
     
     packet* Packets = calloc(numPackets, sizeof(packet));
      
     int sizeLeftToCopy = size;
+    int index = 0;
     for(int packetIter = 0; packetIter < numPackets; packetIter+=1){
-        if (sizeLeftToCopy < 1000){
+        if (sizeLeftToCopy < 88){
 	    //copy only modulo len
-	    int lenSet = sizeLeftToCopy%1000;
-	    packet temp = {numPackets, packetIter, lenSet, filename};
-	    //temp.filename[199] = '\0';
-	    memset(temp.filedata, 0, 1000);
-	    fgets(temp.filedata, lenSet, nextPacket);
+	    int lenSet = sizeLeftToCopy%88;
+	    packet temp = {numPackets, packetIter, lenSet};
+	    strcpy(temp.filename, filename);
+	    temp.filename[99] = '\0';
+	    memset(temp.filedata, '\0', 88);
+	    memcpy(temp.filedata, buffer + index, lenSet);
+            
+            char test[89] = {'\0'};
+	    memcpy(test, temp.filedata, 88);
+
+
 	    Packets[packetIter] = temp;
 	    sizeLeftToCopy -= lenSet;
 	}
 	else{
 	    static int iter = 0;
 	    iter++;
-	    packet temp = {numPackets, packetIter, 1000, filename};
-	    //strcpy(temp.filename, filename);
-	    //temp.filename[199] = '\0';
-	    memset(temp.filedata, 0, 1000);
-	    fgets(temp.filedata, 1000, nextPacket);
+	    packet temp = {numPackets, packetIter, 88};
+	    strcpy(temp.filename, filename);
+	    temp.filename[99] = '\0';
+	    memset(temp.filedata, '\0', 88);
+	    memcpy(temp.filedata, buffer + index, 88);
+	    
+	    char test[89] = {'\0'};
+	    memcpy(test, temp.filedata, 88);
+	    //printf("whats in this packet: %s\n", test);
+	    
 	    Packets[packetIter] = temp;
-	    //nextPacket += 1000;
-	    fseek(nextPacket, 1000, SEEK_CUR);
-	    sizeLeftToCopy -= 1000;
+	    fseek(nextPacket, 88, SEEK_CUR);
+	    sizeLeftToCopy -= 88;
+	    index += 88;
 	}
     }
 
@@ -196,14 +224,10 @@ packet* packetMaker(FILE* fptr, int size, char* filename){
 
 void serialize(packet myPacket, char* serialArr){
     memcpy(serialArr, &(myPacket.total_frag), 4);
-    serialArr[4] = ':';
-    memcpy(serialArr + 5, &(myPacket.frag_no), 4);
-    serialArr[9] = ':';
-    memcpy(serialArr + 10, &(myPacket.size), 4);
-    serialArr[14] = ':';
-    memcpy(serialArr + 15, &(myPacket.filename), strlen(myPacket.filename));
-    serialArr[15 + strlen(myPacket.filename)];
-    memcpy(serialArr + 16 + strlen(myPacket.filename), &(myPacket.filedata), 1000);
-    serialArr[1016 + strlen(myPacket.filename)] = '\0';
+    memcpy(serialArr + 4,&(myPacket.frag_no), 4);
+    memcpy(serialArr + 8, &(myPacket.size), 4);
+    memcpy(serialArr + 12, &(myPacket.filename), 100);
+    memcpy(serialArr + 12 + 100, &(myPacket.filedata), 88);
+    serialArr[200] = '\0';
 }
 

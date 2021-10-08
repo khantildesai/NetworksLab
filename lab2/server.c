@@ -12,11 +12,14 @@ typedef struct packet {
     unsigned int total_frag;    //total number of fragments of the file.
     unsigned int frag_no;    //sequenze number
     unsigned int size;    //size of data in range from 0 to 1000
-    char* filename;
-    char filedata[1000];
+    char filename[100];
+    char filedata[88];
 } packet;
 
 packet deSerialize(char* serialArr);
+
+char filename[100] = {'\0'};
+//memset(filename, '\0', 100);
 
 int main(int argc, char *argv[]){
     if (argc != 2){ //if less/more than 1 arg given; return
@@ -53,18 +56,43 @@ int main(int argc, char *argv[]){
     socklen_t *addressSizePtr = &addressSize;
     printf("Server receiving on port %d.\n", portNum);
 
+
+    int currRecv = 0;
     while(1){
         recvfrom(FileDescriptor, buffer, 200, 0, (struct sockaddr *) storageAddressPtr, addressSizePtr);
-        //checking if it is yes or no to send to the client
+        
+	//checking if it is yes or no to send to the client
         if(strcmp(buffer,"ftp") == 0){
 	    printf("recieved message, sending reply!\n");
             sendto(FileDescriptor, "yes", strlen("yes"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
         }
-        else{
-	    printf("should be colon %c\n", buffer[9]);
+        
+	else{
             packet curr = deSerialize(buffer);
-	    printf("should be colon: %c", buffer[15]);
-	    sendto(FileDescriptor, "no", strlen("no"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+	    if (curr.frag_no == currRecv){
+	       
+	       //printf("gonna send ACK\n");
+	       sendto(FileDescriptor, "recieved", strlen("recieved"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+	       
+	       int tester = strlen(curr.filedata);
+	       //printf("len: %d\n", tester);
+	       //printf("gonna save: %d\n", curr.size);
+	       char test[81] = {'\0'};
+	       memcpy(test, curr.filedata, curr.size);
+	       FILE* fp;
+	       //printf("toSave: %s\n", test);
+	       fp = fopen(curr.filename, "a+");
+	       //fputs(test, fp);
+	       fwrite(curr.filedata, 1, curr.size, fp);
+	       fclose(fp);
+	       if (currRecv == curr.total_frag - 1){
+	           currRecv = 0;
+	       }
+	       else {
+	           currRecv++;
+	       }
+	    }
+	    //sendto(FileDescriptor, "received", strlen("received"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
         }
 
     }
@@ -76,33 +104,19 @@ packet deSerialize(char* serialArr){
     
     //total_frag
     memcpy(&toReturn.total_frag, serialArr, 4);
-    printf("copied total_frag\n");
     
     //frag_no
-    memcpy(&toReturn.frag_no, serialArr + 5, 4);
-    printf("copied frag_no\n");
+    memcpy(&toReturn.frag_no, serialArr + 4, 4);
     
     //size
-    memcpy(&toReturn.size, serialArr + 10, 4);
-    printf("copied size\n");
+    memcpy(&toReturn.size, serialArr + 8, 4);
     
     //filename
-    //char* fileNameInput = strtok(serialArr + 15, ":");
-    //int fileNameSize = strlen(fileNameInput);
-    //char* newfilename = malloc(fileNameSize);
-    memcpy(&toReturn.filename, serialArr + 15, 11);
-    printf("copied filename\n");
+    memcpy(&toReturn.filename, serialArr + 12, 100);
     
     //filedata
-    //char* filedataPtr = strtok(serialArr + 27, "\0");
-    memcpy(&toReturn.filedata, serialArr + 27, 1000);
-    printf("copied filedata\n");
-
-    //toReturn.total_frag = strtok(serialArr, ':');
-    //toReturn.frag_no = strtok(NULL, ':');
-    //toReturn.size = strtok(NULL, ':');
-    //toReturn.filename = strtok(NULL, ':');
-    //toReturn.filedata = strtok(NULL, '\0');
+    memcpy(&toReturn.filedata, serialArr + 112, 88);
+    //printf("finished deserializing");
     return toReturn;
 }
 
