@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include <time.h>
 
+#define POLLING 32
+
 typedef struct packet {
     unsigned int total_frag;    //total number of fragments of the file.
     unsigned int frag_no;   //sequence number.
@@ -129,32 +131,50 @@ int main(int argc, char *argv[]){
     packet* packets = packetMaker(fPtr, size, fname);
     int numPackets = packets[0].total_frag;
 
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 60;   //Beej's guide page 50
+    if(setsockopt(FileDescriptor, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+        printf("setsockopt function has failed\n");
+    }
+
     //send packets
     for (int i = 0; i < numPackets; i++){
 	//getting and preparing packet
         packet curr = packets[i];
         char myArr[1200];
-	serialize(curr, myArr);
+	    serialize(curr, myArr);
          
 	//sending packet
         ByteCount = sendto(FileDescriptor, myArr, 1200, 0, (struct sockaddr *) &server_addr, sizeof(server_addr));
         
-	if (ByteCount == -1){
+	    if (ByteCount == -1){
             printf("there was a sendto error!\n");
-	    return 1;
+	        return 1;
         }
 
-	//wait 0.2 sec
-	//sleep(0.2);
+	    memset(CharArr, 0, CharArrSize); //clearn buffer
 
-	memset(CharArr, 0, CharArrSize); //clearn buffer
-        
-	//recieve the message
-        ByteCount = recvfrom(FileDescriptor, CharArr, CharArrSize, 0, (struct sockaddr *) &server_addr, &server_addr_size);
-        
-        if (strcmp(CharArr, "received") != 0){
-            i--;
+        if((ByteCount = recvfrom(FileDescriptor, CharArr, CharArrSize, 0, (struct sockaddr *) &server_addr, &server_addr_size)) == -1){
+            printf("Retransmitting last packet due to timeout\n");
+            i -= 1;
+        }else{
+            printf("ACK received\n");
         }
+
+
+	    // //recieve the message with a time out of wait 0.00006 seconds.
+        // ByteCount = recvfrom(FileDescriptor, CharArr, CharArrSize, 0, (struct sockaddr *) &server_addr, &server_addr_size);
+        
+        // //wait 0.00006 seconds. 
+        // //sleep(0.0006);
+        
+        // if (strcmp(CharArr, "ACK") == 0){
+        //     printf("ACK received\n");
+        // }else{
+        //     printf("Retransmitting last packet.\n");
+        //     i -= 1;
+        // }
     }
     free(packets);
     
