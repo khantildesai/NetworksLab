@@ -13,7 +13,7 @@ typedef struct packet {
     unsigned int frag_no;    //sequenze number
     unsigned int size;    //size of data in range from 0 to 1000
     char filename[100];
-    char filedata[88];
+    char filedata[1000];
 } packet;
 
 packet deSerialize(char* serialArr);
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]){
 
     int currRecv = 0;
     while(1){
-        recvfrom(FileDescriptor, buffer, 200, 0, (struct sockaddr *) storageAddressPtr, addressSizePtr);
+        recvfrom(FileDescriptor, buffer, 10000, 0, (struct sockaddr *) storageAddressPtr, addressSizePtr);
         
 	//checking if it is yes or no to send to the client
         if(strcmp(buffer,"ftp") == 0){
@@ -72,13 +72,14 @@ int main(int argc, char *argv[]){
 	    if (curr.frag_no == currRecv){
 	       
 	       //printf("gonna send ACK\n");
-	       sendto(FileDescriptor, "recieved", strlen("recieved"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+	       //char* stringInt = itoa(curr.frag_no);
+	       sendto(FileDescriptor, "received", strlen("received"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
 	       
-	       int tester = strlen(curr.filedata);
+	       //int tester = strlen(curr.filedata);
 	       //printf("len: %d\n", tester);
 	       //printf("gonna save: %d\n", curr.size);
-	       char test[81] = {'\0'};
-	       memcpy(test, curr.filedata, curr.size);
+	       //char test[81] = {'\0'};
+	       //memcpy(test, curr.filedata, curr.size);
 	       FILE* fp;
 	       //printf("toSave: %s\n", test);
 	       fp = fopen(curr.filename, "a+");
@@ -115,7 +116,7 @@ packet deSerialize(char* serialArr){
     memcpy(&toReturn.filename, serialArr + 12, 100);
     
     //filedata
-    memcpy(&toReturn.filedata, serialArr + 112, 88);
+    memcpy(&toReturn.filedata, serialArr + 112, 1000);
     //printf("finished deserializing");
     return toReturn;
 }
