@@ -1,0 +1,55 @@
+This document contains confidential proprietary information which is not to be disclosed to unauthorized persons without the prior written consent of
+Juniper Networks, Inc. You may use this document only for your internal business purposes. You may not distribute this document, whether in electronic or
+printed form, outside your facilities specified in your license agreement. You may not modify the document.
+While every attempt has been made to keep the information in this document as accurate and current as possible, Juniper Networks makes no warranty,
+expressed or implied, with regard to the information contained herein, including, but not limited to, the implied warranties of merchantability and fitness
+for any particular application. Juniper Networks further assumes no responsibility for any errors that may appear within this document or for any damages,
+direct or indirect, that may result from using this document. 1
+
+
+This document contains confidential proprietary information which is not to be disclosed to unauthorized persons without the prior written consent of
+Juniper Networks, Inc. You may use this document only for your internal business purposes. You may not distribute this document, whether in electronic or
+printed form, outside your facilities specified in your license agreement. You may not modify the document.
+While every attempt has been made to keep the information in this document as accurate and current as possible, Juniper Networks makes no warranty,
+expressed or implied, with regard to the information contained herein, including, but not limited to, the implied warranties of merchantability and fitness
+for any particular application. Juniper Networks further assumes no responsibility for any errors that may appear within this document or for any damages,
+direct or indirect, that may result from using this document. 2
+
+
+
+This document contains confidential proprietary information which is not to be disclosed to unauthorized persons without the prior written consent of
+Juniper Networks, Inc. You may use this document only for your internal business purposes. You may not distribute this document, whether in electronic or
+printed form, outside your facilities specified in your license agreement. You may not modify the document.
+While every attempt has been made to keep the information in this document as accurate and current as possible, Juniper Networks makes no warranty,
+expressed or implied, with regard to the information contained herein, including, but not limited to, the implied warranties of merchantability and fitness
+for any particular application. Juniper Networks further assumes no responsibility for any errors that may appear within this document or for any damages,
+direct or indirect, that may result from using this document. 3
+
+
+
+This document contains confidential proprietary information which is not to be disclosed to unauthorized persons without the prior written consent of
+Juniper Networks, Inc. You may use this document only for your internal business purposes. You may not distribute this document, whether in electronic or
+printed form, outside your facilities specified in your license agreement. You may not modify the document.
+While every attempt has been made to keep the information in this document as accurate and current as possible, Juniper Networks makes no warranty,
+expressed or implied, with regard to the information contained herein, including, but not limited to, the implied warranties of merchantability and fitness
+for any particular application. Juniper Networks further assumes no responsibility for any errors that may appear within this document or for any damages,
+direct or indirect, that may result from using this document. 4
+
+
+
+This document contains confidential proprietary information which is not to be disclosed to unauthorized persons without the prior written consent of
+Juniper Networks, Inc. You may use this document only for your internal business purposes. You may not distribute this document, whether in electronic or
+printed form, outside your facilities specified in your license agreement. You may not modify the document.
+While every attempt has been made to keep the information in this document as accurate and current as possible, Juniper Networks makes no warranty,
+expressed or implied, with regard to the information contained herein, including, but not limited to, the implied warranties of merchantability and fitness
+for any particular application. Juniper Networks further assumes no responsibility for any errors that may appear within this document or for any damages,
+direct or indirect, that may result from using this document. 5
+
+
+This document contains confidential proprietary information which is not to be disclosed to unauthorized persons without the prior written consent of
+Juniper Networks, Inc. You may use this document only for your internal business purposes. You may not distribute this document, whether in electronic or
+printed form, outside your facilities specified in your license agreement. You may not modify the document.
+While every attempt has been made to keep the information in this document as accurate and current as possible, Juniper Networks makes no warranty,
+expressed or implied, with regard to the information contained herein, including, but not limited to, the implied warranties of merchantability and fitness
+for any particular application. Juniper Networks further assumes no responsibility for any errors that may appear within this document or for any damages,
+direct or indirect, that may result from using this document. 6

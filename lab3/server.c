@@ -17,6 +17,7 @@ typedef struct packet {
 } packet;
 
 packet deSerialize(char* serialArr);
+double uniform_rand();
 
 char filename[100] = {'\0'};
 //memset(filename, '\0', 100);
@@ -67,33 +68,40 @@ int main(int argc, char *argv[]){
             sendto(FileDescriptor, "yes", strlen("yes"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
         }
         
-	else{
-            packet curr = deSerialize(buffer);
-	    if (curr.frag_no == currRecv){
-	       
-	       //printf("gonna send ACK\n");
-	       //char* stringInt = itoa(curr.frag_no);
-	       sendto(FileDescriptor, "received", strlen("received"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
-	       
-	       //int tester = strlen(curr.filedata);
-	       //printf("len: %d\n", tester);
-	       //printf("gonna save: %d\n", curr.size);
-	       //char test[81] = {'\0'};
-	       //memcpy(test, curr.filedata, curr.size);
-	       FILE* fp;
-	       //printf("toSave: %s\n", test);
-	       fp = fopen(curr.filename, "a+");
-	       //fputs(test, fp);
-	       fwrite(curr.filedata, 1, curr.size, fp);
-	       fclose(fp);
-	       if (currRecv == curr.total_frag - 1){
-	           currRecv = 0;
-	       }
-	       else {
-	           currRecv++;
-	       }
-	    }
-	    //sendto(FileDescriptor, "received", strlen("received"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+	    else{
+
+            if(uniform_rand() > 0.01){
+                packet curr = deSerialize(buffer);
+
+                if (curr.frag_no == currRecv){
+                
+                //printf("gonna send ACK\n");
+                //char* stringInt = itoa(curr.frag_no);
+                sendto(FileDescriptor, "ACK", strlen("ACK"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
+                
+                //int tester = strlen(curr.filedata);
+                //printf("len: %d\n", tester);
+                //printf("gonna save: %d\n", curr.size);
+                //char test[81] = {'\0'};
+                //memcpy(test, curr.filedata, curr.size);
+                FILE* fp;
+                //printf("toSave: %s\n", test);
+                fp = fopen(curr.filename, "a+");
+                //fputs(test, fp);
+                fwrite(curr.filedata, 1, curr.size, fp);
+                fclose(fp);
+                    if (currRecv == curr.total_frag - 1){
+                        currRecv = 0;
+                    }
+                    else {
+                        currRecv++;
+                    }
+                }
+            }else{
+                printf("Packet has been dropped!\n");
+            }
+            
+	    
         }
 
     }
@@ -121,3 +129,6 @@ packet deSerialize(char* serialArr){
     return toReturn;
 }
 
+double uniform_rand(){
+    return (double)rand() / (double)RAND_MAX;
+}

@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <time.h>
 
 #define POLLING 32
@@ -96,7 +97,8 @@ int main(int argc, char *argv[]){
     int ByteCount;
 
     //send ftp to server
-    t = clock();
+    struct timeval tstart;
+    int t1 = gettimeofday(&tstart, NULL);
     ByteCount = sendto(FileDescriptor, "ftp", strlen("ftp"), 0, (struct sockaddr *) &server_addr, sizeof(server_addr));
     if (ByteCount == -1){
         printf("there was a sendto error!\n");
@@ -108,7 +110,9 @@ int main(int argc, char *argv[]){
 
     //recieve the message
     ByteCount = recvfrom(FileDescriptor, CharArr, CharArrSize, 0, (struct sockaddr *) &server_addr, &server_addr_size);
-    t = clock() - t;
+    struct timeval tend;
+    int t2 = gettimeofday(&tend, NULL);
+    int tdiff = tend.tv_usec - tstart.tv_usec;
     if (ByteCount != -1){
         double rtt = ((double)t)/CLOCKS_PER_SEC;
         printf("round-trip time from the client to the server is %f seconds.\n", rtt);
@@ -133,7 +137,7 @@ int main(int argc, char *argv[]){
 
     struct timeval timeout;
     timeout.tv_sec = 0;
-    timeout.tv_usec = 60;   //Beej's guide page 50
+    timeout.tv_usec = 2*tdiff;   //Beej's guide page 50
     if(setsockopt(FileDescriptor, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
         printf("setsockopt function has failed\n");
     }
@@ -157,7 +161,7 @@ int main(int argc, char *argv[]){
 
         if((ByteCount = recvfrom(FileDescriptor, CharArr, CharArrSize, 0, (struct sockaddr *) &server_addr, &server_addr_size)) == -1){
             printf("Retransmitting last packet due to timeout\n");
-            i -= 1;
+            i--;
         }else{
             printf("ACK received\n");
         }
