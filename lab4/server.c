@@ -8,127 +8,105 @@
 #include <sys/types.h>
 #include <ctype.h>
 
-typedef struct packet {
-    unsigned int total_frag;    //total number of fragments of the file.
-    unsigned int frag_no;    //sequenze number
-    unsigned int size;    //size of data in range from 0 to 1000
-    char filename[100];
-    char filedata[1000];
-} packet;
+#define POLLING 32
+#define COMMANDINPUTSIZE 300
+#define LISTEN_BACKLOG 50
+//name and data macro
+#define MAX_NAME 31
+#define MAX_DATA 301
 
-packet deSerialize(char* serialArr);
-double uniform_rand();
+//macros for message types
+#define LOGIN 0
+#define LO_ACK 1
+#define LO_NACK 2
+#define EXIT 3
+#define JOIN 4
+#define JN_ACK 5
+#define JN_NACK 6
+#define LEAVE_SESS 7
+#define NEW_SESS 8
+#define NS_ACK 9
+#define MESSAGE 10
+#define QUERY 11
+#define QU_ACK 12
+#define NEW_ACC 13
+#define NEW_ACC_ACK 14
+#define NEW_ACC_NACK 15
 
-char filename[100] = {'\0'};
-//memset(filename, '\0', 100);
+//message struct to be used for tcp messages
+typedef struct message {
+    unsigned int type;
+    unsigned int size;
+    unsigned char source[MAX_NAME];
+    unsigned char data[MAX_DATA];    
+} message;
+int serializedMessageLen = 2*sizeof(unsigned int) + (MAX_NAME + MAX_DATA)*sizeof(unsigned char);
 
+//global variables to keep track of cilent state
+int loggedIn = -1;
+int inSession = -1;
+
+//global variables to see if command keyword entered or not
+const char login[] = "/login";
+const char logout[] = "/logout";
+const char joinsession[] = "/joinsession";
+const char leavesession[] = "/leavesession";
+const char createsession[] = "/createsession";
+const char list[] = "/list";
+const char quit[] = "/quit";
+
+//delimeter to parse input
+const char delim[] = " ";
+
+//check if input is valid
+int validInput(char* command, char* totalCommand);
+
+//login into server script
+int Login(char* totalCommand);
+
+//serialize messages function
+message deSerialize(char* serialArr);
+
+//main
 int main(int argc, char *argv[]){
     if (argc != 2){ //if less/more than 1 arg given; return
         return 1;
     }
     int portNum = atoi(argv[1]);
 
-    int FileDescriptor = socket(AF_INET, SOCK_DGRAM, 0);
-
-    //making sockaddr_in struct
-    struct in_addr addrStruct;
-    addrStruct.s_addr = htonl(INADDR_ANY);
-    struct sockaddr_in socketAddr;
-    socketAddr.sin_family = AF_INET;
-    socketAddr.sin_port = htons(portNum);
-    socketAddr.sin_addr = addrStruct;
-    
-    //pointer to struct
-    struct sockaddr_in *addrPtr;
-    addrPtr = &socketAddr;
-
-    //bind check
-    int bindSucc = bind(FileDescriptor, (const struct sockaddr *)addrPtr, sizeof(struct sockaddr));
-    if(bindSucc == -1){
-        printf("bind failed\n");
+    int listeningFD = socket(AF_INET, SOCK_STREAM, 0);
+    printf("starting to listen...\n");
+    if (listen(listeningFD, LISTEN_BACKLOG) == -1){
+        printf("ERROR: LISTEN FAILED!\n"); return -1;
     }
-
-    //using the recvfrom function
-    char buffer[10000];
+    
+    //structs for storing address of client to connect
     struct sockaddr_storage storageAddress;
-    struct sockaddr_storage *storageAddressPtr;
-    storageAddressPtr = &storageAddress;
+    struct sockaddr_storage *storageAddressPtr = &storageAddress;
     socklen_t addressSize = sizeof(storageAddress);
     socklen_t *addressSizePtr = &addressSize;
-    printf("Server receiving on port %d.\n", portNum);
 
-
-    int currRecv = 0;
-    while(1){
-        recvfrom(FileDescriptor, buffer, 10000, 0, (struct sockaddr *) storageAddressPtr, addressSizePtr);
-        
-	//checking if it is yes or no to send to the client
-        if(strcmp(buffer,"ftp") == 0){
-	    printf("recieved message, sending reply!\n");
-            sendto(FileDescriptor, "yes", strlen("yes"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
-        }
-        
-	    else{
-
-            if(uniform_rand() > 0.01){
-                packet curr = deSerialize(buffer);
-
-                if (curr.frag_no == currRecv){
-                
-                //printf("gonna send ACK\n");
-                //char* stringInt = itoa(curr.frag_no);
-                sendto(FileDescriptor, "ACK", strlen("ACK"), 0, (struct sockaddr *) storageAddressPtr, sizeof(storageAddress));
-                
-                //int tester = strlen(curr.filedata);
-                //printf("len: %d\n", tester);
-                //printf("gonna save: %d\n", curr.size);
-                //char test[81] = {'\0'};
-                //memcpy(test, curr.filedata, curr.size);
-                FILE* fp;
-                //printf("toSave: %s\n", test);
-                fp = fopen(curr.filename, "a+");
-                //fputs(test, fp);
-                fwrite(curr.filedata, 1, curr.size, fp);
-                fclose(fp);
-                    if (currRecv == curr.total_frag - 1){
-                        currRecv = 0;
-                    }
-                    else {
-                        currRecv++;
-                    }
-                }
-            }else{
-                printf("Packet has been dropped!\n");
-            }
-            
-	    
-        }
-
+    if (accept(listeningFD,(struct sockaddr*) storageAddressPtr, addressSizePtr) == -1){
+        printf("ERROR: ACCEPT FAILED!\n"); return -1;
     }
+
 }
 
-packet deSerialize(char* serialArr){
+message deSerialize(char* serialArr){
     //packet to return
-    packet toReturn;
+    message toReturn;
     
-    //total_frag
-    memcpy(&toReturn.total_frag, serialArr, 4);
-    
-    //frag_no
-    memcpy(&toReturn.frag_no, serialArr + 4, 4);
+    //type
+    memcpy(&toReturn.type, serialArr, sizeof(unsigned int));
     
     //size
-    memcpy(&toReturn.size, serialArr + 8, 4);
+    memcpy(&toReturn.size, serialArr + sizeof(unsigned int), sizeof(unsigned int));
     
-    //filename
-    memcpy(&toReturn.filename, serialArr + 12, 100);
+    //source
+    memcpy(&toReturn.source, serialArr + 2*(sizeof(unsigned int)), MAX_NAME*sizeof(unsigned char));
     
-    //filedata
-    memcpy(&toReturn.filedata, serialArr + 112, 1000);
-    //printf("finished deserializing");
+    //data
+    memcpy(&toReturn.data, serialArr + 2*(sizeof(unsigned int)) + MAX_NAME*sizeof(unsigned char), MAX_DATA*sizeof(unsigned char));
+    
     return toReturn;
-}
-
-double uniform_rand(){
-    return (double)rand() / (double)RAND_MAX;
 }
