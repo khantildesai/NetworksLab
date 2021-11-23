@@ -23,21 +23,28 @@ typedef struct message {
 	unsigned char data[MAX_DATA];
 } message;
 
+//user information struct
+typedef struct user{
+    char clientID[MAX_NAME];
+    char password[MAX_NAME];
+    char sessionID[MAX_NAME];
+} user;
+
+user list_of_users[4] = {{"Joel", "0000", "general"}, {"Khantil", "1234", "general"}, {"Jane", "1111", "general"}, {"Natalie", "Khantil", "general"}};
+
+
 int acceptConnect(int listeningFD);
 int setup_listen(int portNum);
 void handleNini(int clientFD);
 
-<<<<<<< HEAD
-
-=======
 //serialize messages function
 void serialize(message messagePacket, char* serialArr);
 
 //deserializing message function
 message deSerialize(char* serialArr);
->>>>>>> cea6ee8fb3c2323a920aea9f7e0d8b66d1f3f898
 
 int main(int argc, char *argv[]){
+
     if (argc != 2){
         return 1;
     }
