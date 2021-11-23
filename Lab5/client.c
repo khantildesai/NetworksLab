@@ -71,10 +71,13 @@ void serialize(message messagePacket, char* serialArr);
 message deSerialize(char* serialArr);
 
 //connect to server function
-int connectToServer(void);
+int connectToServer(int portNum);
+
+//make login struct
+message makeLoginMessage(char* totalCommand);
 
 int main(void){
-	int FileDescriptor = connectToServer();
+	int FileDescriptor = connectToServer(2000);
 
 	while(1){// main loop
 		//buffers
@@ -156,7 +159,7 @@ message deSerialize(char* serialArr){
 	memcpy(&toReturn.data, serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), MAX_DATA*sizeof(unsigned char));
 }
 
-int connectToServer(void){
+int connectToServer(int portNum){
 	//socket for communicating nini
 	int FileDescriptor = socket(AF_INET, SOCK_STREAM, 0);
 	if(FileDescriptor < 0){
@@ -166,7 +169,7 @@ int connectToServer(void){
 	struct sockaddr_in server_address;
 
 	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(2000); //This is is super hardcoded REMEMBER TO CHANGE OTHERWISE PROBLEMS ALWAYS
+	server_address.sin_port = htons(portNum);
 	server_address.sin_addr.s_addr = inet_addr("128.100.13.176");
 
 	//Send request nini to server
@@ -176,4 +179,51 @@ int connectToServer(void){
 	}
 	printf("connected successfully\n");
 	return FileDescriptor;
+}
+
+message makeLoginMessage(char* totalCommand){
+	int valid = 0; //0 = valid
+
+	//get login parameters
+	char *clientID = strtok(NULL, delim);
+	char *password = strtok(NULL, delim);
+	char *serverIP = strtok(NULL, delim);
+	char *serverPort = strtok(NULL, delim);
+
+	//ensure proper parameters
+	if (clientID == NULL){printf("Invalid Login Parameters!"); valid = -1;}
+	if (password == NULL){printf("Invalid Login Parameters!"); valid = -1;}
+	if (serverIP == NULL){printf("Invalid Login Parameters!"); valid = -1;}
+	if (serverPort == NULL){printf("Invalid Login Parameters!"); valid = -1;}
+
+	//get port num
+	int portNum = atoi(serverPort);
+
+	//make login message and 
+	int loginFD = connectToServer(portNum);
+
+	//create Message Packet struct
+	if (valid != 1){
+		message packetMessage;
+		packetMessage.type = -1;
+		return packetMessage;
+	}
+	else {
+		//make login message and find its length
+		char loginMessage[65];
+		strcat(loginMessage, clientID);
+		int index = strlen(clientID);
+		loginMessage[index] = ':';
+		strcat(loginMessage + index + 1, password);
+		int loginMessageLen = strlen(clientID) + 1 + strlen(password);
+
+		//create message packet struct
+		message packetMessage;
+		packetMessage.type = LOGIN;
+		packetMessage.size = loginMessageLen;
+		memcpy(packetMessage.source, clientID, strlen(clientID));
+		memcpy(packetMessage.data, loginMessage, loginMessageLen);
+
+		return packetMessage;
+	}
 }
