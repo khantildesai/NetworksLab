@@ -46,7 +46,7 @@ int main(void){
 
 	server_address.sin_family = AF_INET;
 	server_address.sin_port = htons(2000); //This is is super hardcoded REMEMBER TO CHANGE OTHERWISE PROBLEMS ALWAYS
-	server_address.sin_addr.s_addr = inet_addr("128.100.13.171");
+	server_address.sin_addr.s_addr = inet_addr("128.100.13.176");
 
 	//Send request nini to server
 	if(connect(FileDescriptor, (struct sockaddr *) &server_address, sizeof(server_address)) < 0){
@@ -64,10 +64,8 @@ int main(void){
 			return -1;
 		}
 		
-		
     }
 
-	
 }
 
 int validInput(char* command){

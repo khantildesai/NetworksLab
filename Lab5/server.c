@@ -7,6 +7,8 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <ctype.h>
+#include <sys/time.h>
+#include <sys/types.h>
 
 #define COMMANDINPUTSIZE 2000
 
@@ -16,6 +18,11 @@ struct message{
     unsigned char source[31];
     unsigned char data[301];
 };
+
+int acceptConnect(int listeningFD);
+int setup_listen(int portNum);
+void handleNini(int clientFD);
+
 int main(int argc, char *argv[]){
     if (argc != 2){
         return 1;
@@ -23,17 +30,74 @@ int main(int argc, char *argv[]){
     int portNum = atoi(argv[1]);
     printf("%d\n", portNum);
 
-    //Creating the buffers right here
-    char server_buffer[COMMANDINPUTSIZE], client_buffer[COMMANDINPUTSIZE];
+    int FileDescriptor = setup_listen(portNum);
 
-	//Clean buffers
-	memset(server_buffer, '\0', sizeof(server_buffer));
-	memset(client_buffer, '\0', sizeof(client_buffer));
+    //int clientFD = acceptConnect(FileDescriptor);
 
+    fd_set all_sockets, prepared_sockets;
 
+    //initialize sets
+    FD_ZERO(&all_sockets);
+    FD_SET(FileDescriptor, &all_sockets);
+
+    while(1){
+        prepared_sockets = all_sockets;
+
+        if (select(FD_SETSIZE, &prepared_sockets, NULL, NULL, NULL) < 0){
+            perror("select done goofed!");
+            exit(-1);
+        }
+
+        for(int iter = 0; iter < FD_SETSIZE; iter++){
+            if (FD_ISSET(iter, &prepared_sockets)){
+                if (iter == FileDescriptor){
+                    //accepting this connection request
+                    int new_con = acceptConnect(FileDescriptor);
+                    FD_SET(new_con, &all_sockets);
+                } else {
+                    handleNini(iter);
+                }
+            }
+        }
+        /*
+        //Creating the buffers right here
+        char server_buffer[COMMANDINPUTSIZE], client_buffer[COMMANDINPUTSIZE];
+
+        //Clean buffers
+        memset(server_buffer, '\0', sizeof(server_buffer));
+        memset(client_buffer, '\0', sizeof(client_buffer));
+
+        if(recv(clientFD, client_buffer, sizeof(client_buffer), 0) < 0){
+            printf("Ya I couldn't receive\n");
+            return -1;
+        }
+        printf("%s", client_buffer);
+        memset(client_buffer, '\0', sizeof(client_buffer));*/
+    }
+}
+
+int acceptConnect(int listeningFD){
+    //Address information of peer struct
+    struct sockaddr_storage storageAddress;
+    struct sockaddr_storage *storageAddressPtr;
+    storageAddressPtr = &storageAddress;
+    socklen_t addressSize = sizeof(storageAddress);
+    socklen_t *addressSizePtr = &addressSize;
+
+    int new_socket;
+
+    if(!(listen(listeningFD, 7))){
+        new_socket = accept(listeningFD, (struct sockaddr *)storageAddressPtr, addressSizePtr);
+    }
+    printf("new_socket\n");  //Might want to remove this later on.
+
+    return new_socket;
+}
+
+int setup_listen(int portNum){
     int FileDescriptor = socket(AF_INET, SOCK_STREAM, 0);
 
-    //making sockaddr_in struct
+    //making sockaddr_in struct for listening socket
     struct in_addr addrStruct;
     addrStruct.s_addr = htonl(INADDR_ANY);
     struct sockaddr_in socketAddr;
@@ -51,29 +115,19 @@ int main(int argc, char *argv[]){
         printf("bind failed\n");
     }
 
-    //Address information of peer struct
-    struct sockaddr_storage storageAddress;
-    struct sockaddr_storage *storageAddressPtr;
-    storageAddressPtr = &storageAddress;
-    socklen_t addressSize = sizeof(storageAddress);
-    socklen_t *addressSizePtr = &addressSize;
+    return FileDescriptor;  
+}
 
-    int new_socket;
+void handleNini(int clientFD){
+    //Creating the buffers right here
+    char client_buffer[COMMANDINPUTSIZE];
 
-    if(!(listen(FileDescriptor, 7))){
-        new_socket = accept(FileDescriptor, (struct sockaddr *)storageAddressPtr, addressSizePtr);
+    //Clean buffers
+    memset(client_buffer, '\0', sizeof(client_buffer));
+
+    if(recv(clientFD, client_buffer, sizeof(client_buffer), 0) < 0){
+        printf("Ya I couldn't receive\n");
     }
-    printf("new_socket\n");  //Might want to remove this later on.
-
-    while(1){
-        if(recv(new_socket, client_buffer, sizeof(client_buffer), 0) < 0){
-            printf("Ya I couldn't receive\n");
-            return -1;
-        }
-        printf("%s", client_buffer);
-        memset(client_buffer, '\0', sizeof(client_buffer));
-    }
-    
-
-
+    printf("%s", client_buffer);
+    memset(client_buffer, '\0', sizeof(client_buffer));
 }
