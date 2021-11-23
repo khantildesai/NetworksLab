@@ -27,11 +27,15 @@ int acceptConnect(int listeningFD);
 int setup_listen(int portNum);
 void handleNini(int clientFD);
 
+<<<<<<< HEAD
+
+=======
 //serialize messages function
 void serialize(message messagePacket, char* serialArr);
 
 //deserializing message function
 message deSerialize(char* serialArr);
+>>>>>>> cea6ee8fb3c2323a920aea9f7e0d8b66d1f3f898
 
 int main(int argc, char *argv[]){
     if (argc != 2){
