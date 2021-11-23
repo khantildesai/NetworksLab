@@ -10,20 +10,32 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
-#define COMMANDINPUTSIZE 2000
+#define COMMANDINPUTSIZE 301 //command line input size
 
-struct message{
-    unsigned int type;
-    unsigned int size;
-    unsigned char source[31];
-    unsigned char data[301];
-};
+#define MAX_NAME 31 //30 char max username
+#define MAX_DATA 301 //300 max data (one line)
+
+//message struct for message format
+typedef struct message {
+	unsigned int type;
+	unsigned int size;
+	unsigned char source[MAX_NAME];
+	unsigned char data[MAX_DATA];
+} message;
 
 int acceptConnect(int listeningFD);
 int setup_listen(int portNum);
 void handleNini(int clientFD);
 
+<<<<<<< HEAD
 
+=======
+//serialize messages function
+void serialize(message messagePacket, char* serialArr);
+
+//deserializing message function
+message deSerialize(char* serialArr);
+>>>>>>> cea6ee8fb3c2323a920aea9f7e0d8b66d1f3f898
 
 int main(int argc, char *argv[]){
     if (argc != 2){
@@ -132,4 +144,28 @@ void handleNini(int clientFD){
     }
     printf("%s", client_buffer);
     memset(client_buffer, '\0', sizeof(client_buffer));
+}
+
+void serialize(message messagePacket, char* serialArr){
+	memcpy(serialArr, &messagePacket.type, sizeof(unsigned int)); //type
+	memcpy(serialArr + sizeof(unsigned int), &(messagePacket.size), sizeof(unsigned int)); //size
+	memcpy(serialArr + 2*sizeof(unsigned int), &(messagePacket.source), MAX_NAME*sizeof(unsigned char)); //source
+	memcpy(serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), &(messagePacket.data), MAX_DATA*sizeof(unsigned char)); //data
+}
+
+message deSerialize(char* serialArr){
+	//packet to return
+	message toReturn;
+
+	//type
+	memcpy(&toReturn.type, serialArr, sizeof(unsigned int));
+
+	//size
+	memcpy(&toReturn.size, serialArr + sizeof(unsigned int), sizeof(unsigned int));
+
+	//source
+	memcpy(&toReturn.source, serialArr + 2*sizeof(unsigned int), MAX_NAME*sizeof(unsigned int));
+
+	//data
+	memcpy(&toReturn.data, serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), MAX_DATA*sizeof(unsigned char));
 }
