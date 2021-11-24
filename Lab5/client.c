@@ -79,27 +79,29 @@ int connectToServer(int portNum);
 int makeLoginMessage(char* totalCommand);
 
 int main(void){
-	int FileDescriptor = connectToServer(5000);
+	//int FileDescriptor = connectToServer(5000);
 
 	fd_set all_sockets, prepared_sockets;
 
+	FD_ZERO(&all_sockets);
+	FD_SET(STDIN, &all_sockets); // only STDIN at first
+	//FD_SET(FileDescriptor, &readfds);
+
 	while(1){// main loop
+		//prepared_sockets to protect all_sockets from destructive select
+		prepared_sockets = all_sockets;
+
 		//buffers
 		char command_buffer[COMMANDINPUTSIZE], input_buffer[COMMANDINPUTSIZE], message_buffer[COMMANDINPUTSIZE];
 
 		//Clean buffers
 		memset(input_buffer, '\0', COMMANDINPUTSIZE);
 		memset(command_buffer, '\0', COMMANDINPUTSIZE);
-		
-		fd_set readfds;
+		memset(message_buffer, '\0', COMMANDINPUTSIZE);
 
-		FD_ZERO(&readfds);
-		FD_SET(STDIN, &readfds);
-		FD_SET(FileDescriptor, &readfds);
+		select(FD_SETSIZE, &prepared_sockets, NULL, NULL, NULL);
 
-		select(FD_SETSIZE, &readfds, NULL, NULL, NULL);
-
-		if(FD_ISSET(STDIN, &readfds)){
+		if(FD_ISSET(STDIN, &prepared_sockets)){
 			//there was keyboard input
 			fgets(input_buffer, COMMANDINPUTSIZE, stdin); //get input
 			memcpy(message_buffer, input_buffer, COMMANDINPUTSIZE);
@@ -113,15 +115,15 @@ int main(void){
 				printf("not valid\n");
 			}
 
-			if(send(FileDescriptor, message_buffer, sizeof(message_buffer), 0) < 0){
-				printf("There was an error in sending\n");
-				//return -1;
-			}
+			//if(send(FileDescriptor, message_buffer, sizeof(message_buffer), 0) < 0){
+			//	printf("There was an error in sending\n");
+			//	//return -1;
+			//}
 
 			memset(input_buffer, '\0', COMMANDINPUTSIZE); //reset message buffer
 		}
 		for(int iter = 0; iter < FD_SETSIZE; iter++){
-            if (FD_ISSET(iter, &readfds)){
+            if (FD_ISSET(iter, &prepared_sockets)){
                 if(iter != 0){
 					//Creating the buffers right here
 					char client_buffer[COMMANDINPUTSIZE];
@@ -129,11 +131,11 @@ int main(void){
 					//Clean buffers
 					memset(client_buffer, '\0', sizeof(client_buffer));
 
-					int res = recv(FileDescriptor, client_buffer, sizeof(client_buffer), 0);
+					int res = recv(iter, client_buffer, sizeof(client_buffer), 0);
 
 					if(res == 0){
 						close(iter);
-						FD_CLR(iter, &readfds);
+						FD_CLR(iter, &all_sockets);
 						exit(0);
 					}
 
@@ -177,7 +179,7 @@ void serialize(message messagePacket, char* serialArr){
 	memcpy(serialArr, &messagePacket.type, sizeof(unsigned int)); //type
 	memcpy(serialArr + sizeof(unsigned int), &(messagePacket.size), sizeof(unsigned int)); //size
 	memcpy(serialArr + 2*sizeof(unsigned int), &(messagePacket.source), MAX_NAME*sizeof(unsigned char)); //source
-	memcpy(serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), &(messagePacket.data), MAX_DATA*sizeof(unsigned char)); //data
+	memcpy(serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), &(messagePacket.data), messagePacket.size); //data
 }
 
 message deSerialize(char* serialArr){
@@ -195,6 +197,8 @@ message deSerialize(char* serialArr){
 
 	//data
 	memcpy(&toReturn.data, serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), MAX_DATA*sizeof(unsigned char));
+
+	return toReturn;
 }
 
 int connectToServer(int portNum){
@@ -241,16 +245,16 @@ int makeLoginMessage(char* totalCommand){
 	int loginFD = connectToServer(portNum);
 
 	//create Message Packet struct
-	if (valid != 1){
+	if (valid != 0){
 		return -1;
 	}
 	else {
 		//create message packet struct
 		message packetMessage;
 		packetMessage.type = LOGIN;
-		packetMessage.size = sizeof(message);
 		memcpy(packetMessage.source, clientID, strlen(clientID));
 		memcpy(packetMessage.data, password, strlen(password));
+		packetMessage.size = strlen(packetMessage.data);
 
 		//serialize
 		char serializedMessage[400] = {"\0"};
@@ -261,5 +265,6 @@ int makeLoginMessage(char* totalCommand){
 			printf("There was an error in sending\n");
 			//return -1;
 		}
+		printf("sent message to server\n");
 	}
 }

@@ -151,8 +151,8 @@ int setup_listen(int portNum){
 
 int handleNini(int clientFD){
     //Creating the buffers right here
-    char client_buffer[COMMANDINPUTSIZE];
-    char server_response[COMMANDINPUTSIZE] = "login success";
+    char client_buffer[400];
+    char server_response[400] = "login success";
     const char check[] = "login";
     const char delim[] = " ";
     char *firstword;
@@ -164,13 +164,18 @@ int handleNini(int clientFD){
         printf("connect broken :(\n");
         return -1;
     }
-    printf("%s", client_buffer);
-    firstword = strtok(client_buffer, delim);
-    if(strcmp(firstword, check) == 0){
-        if(send(clientFD, server_response, strlen(server_response), 0) < 0){
-            printf("The server failed at responding.");
-        }
-    }
+
+    message first = deSerialize(client_buffer);
+
+    printf("%s\n",first.source);
+    printf("%s\n",first.data);
+    //firstword = strtok(client_buffer, delim);
+
+    //if(strcmp(firstword, check) == 0){
+    //    if(send(clientFD, server_response, strlen(server_response), 0) < 0){
+    //        printf("The server failed at responding.");
+    //    }
+    //}
     memset(client_buffer, '\0', sizeof(client_buffer));
     memset(server_response, '\0', sizeof(server_response));
 }
@@ -193,8 +198,10 @@ message deSerialize(char* serialArr){
 	memcpy(&toReturn.size, serialArr + sizeof(unsigned int), sizeof(unsigned int));
 
 	//source
-	memcpy(&toReturn.source, serialArr + 2*sizeof(unsigned int), MAX_NAME*sizeof(unsigned int));
+	memcpy(&toReturn.source, serialArr + 2*sizeof(unsigned int), MAX_NAME*sizeof(unsigned char));
 
 	//data
-	memcpy(&toReturn.data, serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), MAX_DATA*sizeof(unsigned char));
+	memcpy(&toReturn.data, serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), toReturn.size);
+
+    return toReturn;
 }
