@@ -153,7 +153,7 @@ int setup_listen(int portNum){
 int handleNini(int clientFD){
     //Creating the buffers right here
     char client_buffer[COMMANDINPUTSIZE];
-    char server_response[COMMANDINPUTSIZE] = "login success";
+    char server_passed[COMMANDINPUTSIZE] = "login success";
     const char check[] = "login";
     const char delim[] = " ";
     char *firstword;
@@ -172,8 +172,11 @@ int handleNini(int clientFD){
     if(received_message.type == LOGIN){
         int index;
         for(int i = 0; i<4; i++){
-            if(strcmp())
+            if(strcmp(received_message.source, list_of_users[i].clientID) == 0){
+                index = i;
+            }
         }
+        if(strcmp)
     }
     
 
