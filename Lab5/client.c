@@ -33,6 +33,9 @@
 #define NEW_ACC_ACK 14
 #define NEW_ACC_NACK 15
 
+int serverFD;
+char* myClientID[31] = {'\0'};
+
 //keywords for commands
 const char login[] = "/login";
 const char logout[] = "/logout";
@@ -77,6 +80,24 @@ int connectToServer(int portNum);
 
 //make login struct
 int makeLoginMessage(char* totalCommand);
+
+//make logout struct
+int makeLogoutMessage(char* totalCommand);
+
+//make join struct
+int makeJoinSessionMessage(char* totalCommand);
+
+//make leave struct
+int makeLeaveSessionMessage(char* totalCommand);
+
+//make create struct
+int makeCreateSessionMessage(char* totalCommand);
+
+//make list struct
+int makeQueryMessage(char* totalCommand);
+
+//make message struct
+int makeMessage(char* totalCommand);
 
 int main(void){
 	//int FileDescriptor = connectToServer(5000);
@@ -150,29 +171,44 @@ int main(void){
 int validInput(char* command, char* totalCommand){
 	//check if input is a command and if globals variables indicate that the command is valid
 	if (strcmp(command, login) == 0){
-		if (loggedIn == -1){ 
-			if (makeLoginMessage(totalCommand) < 0) {printf("failed login\n"); return -1;}
-			return 0;}
+		if (loggedIn == -1){
+			int shit = makeLoginMessage(totalCommand);
+			if (serverFD < 0) {printf("failed login\n"); return -1; }
+			serverFD = shit; return 0;}
 		else {return -1;}}
 	else if (strcmp(command, logout) == 0){
-		if (loggedIn == 1){ return 0;}
+		if (loggedIn == 1){ 
+			if (makeLogoutMessage(totalCommand) != -15){ return -1; }
+			return 0;}
 		else {return -1;}}
 	else if (strcmp(command, joinsession) == 0){
-		if ((loggedIn == 1) & inSession == -1){ return 0; }
+		if ((loggedIn == 1) & inSession == -1){ 
+			if (makeJoinSessionMessage(totalCommand) != 0){ return -1; }
+			return 0; }
 		else { return -1; }}
 	else if (strcmp(command, leavesession) == 0){
-		if ((loggedIn == 1) & inSession == 1){ return 0; }
+		if ((loggedIn == 1) & inSession == 1){ 
+			if (makeLeaveSessionMessage(totalCommand) != 0){ return -1; }
+			return 0; }
 		else {return -1; }}
 	else if (strcmp(command, createsession) == 0){
-		if ((loggedIn == 1) & inSession == -1){ return 0; }
+		if ((loggedIn == 1) & inSession == -1){ 
+			if (makeCreateSessionMessage(totalCommand) != 0){ return -1; }
+			return 0; }
 		else { return -1; }}
 	else if (strcmp(command, list) == 0){
-		if ((loggedIn == 1) & inSession == 1){ return 0; }
+		if ((loggedIn == 1) & inSession == 1){ 
+			if (makeQueryMessage(totalCommand) != 0){ return -1; }
+			return 0; }
 		else { return -1; }}
 	else if (strcmp(command, quit) == 0){
-		if ((loggedIn == 1) & inSession == 1){ return 0; }
+		if ((loggedIn == 1) & inSession == 1){ 
+			exit(0);
+			return 0; }
 		else { return -1; }}
-	else { return 0; }
+	else { 
+		if (makeMessage(totalCommand) != 0){ return -1; }
+		return 0; }
 }
 
 void serialize(message messagePacket, char* serialArr){
@@ -263,8 +299,152 @@ int makeLoginMessage(char* totalCommand){
 		//Sending the message nini to server
 		if(send(loginFD, serializedMessage, sizeof(serializedMessage), 0) < 0){
 			printf("There was an error in sending\n");
-			//return -1;
+			return -1;
 		}
 		printf("sent message to server\n");
+		memcpy(myClientID, clientID, 31);
+		return loginFD;
 	}
+}
+
+//make logout struct
+int makeLogoutMessage(char* totalCommand){
+	close(serverFD);
+	return -15;
+}
+
+//make logout struct
+int makeJoinSessionMessage(char* totalCommand){
+	int valid = 0; //0 = valid
+
+	//get login parameters
+	char *sessionID = strtok(NULL, delim);
+
+	//ensure proper parameters
+	if (sessionID == NULL){printf("Invalid Login Parameters!"); valid = -1;}
+
+	//create Message Packet struct
+	if (valid != 0){
+		return -1;
+	}
+	else {
+		//create message packet struct
+		message packetMessage;
+		packetMessage.type = JOIN;
+		memcpy(packetMessage.source, myClientID, 31);
+		memcpy(packetMessage.data, sessionID, strlen(sessionID));
+		packetMessage.size = strlen(packetMessage.data);
+
+		//serialize
+		char serializedMessage[400] = {"\0"};
+		serialize(packetMessage, serializedMessage);
+
+		//Sending the message nini to server
+		if(send(serverFD, serializedMessage, sizeof(serializedMessage), 0) < 0){
+			printf("There was an error in sending\n");
+			return -1;
+		}
+		printf("sent joinsession message to server\n");
+		return 0;
+	}
+}
+
+//make logout struct
+int makeCreateSessionMessage(char* totalCommand){
+	int valid = 0; //0 = valid
+
+	//get login parameters
+	char *sessionID = strtok(NULL, delim);
+
+	//ensure proper parameters
+	if (sessionID == NULL){printf("Invalid Login Parameters!"); valid = -1;}
+
+	//create Message Packet struct
+	if (valid != 0){
+		return -1;
+	}
+	else {
+		//create message packet struct
+		message packetMessage;
+		packetMessage.type = NEW_SESS;
+		memcpy(packetMessage.source, myClientID, 31);
+		memcpy(packetMessage.data, sessionID, strlen(sessionID));
+		packetMessage.size = strlen(packetMessage.data);
+
+		//serialize
+		char serializedMessage[400] = {"\0"};
+		serialize(packetMessage, serializedMessage);
+
+		//Sending the message nini to server
+		if(send(serverFD, serializedMessage, sizeof(serializedMessage), 0) < 0){
+			printf("There was an error in sending\n");
+			return -1;
+		}
+		printf("sent joinsession message to server\n");
+		return 0;
+	}
+}
+
+
+//make logout struct
+int makeLeaveSessionMessage(char* totalCommand){
+	//create message packet struct
+	message packetMessage;
+	packetMessage.type = LEAVE_SESS;
+	memcpy(packetMessage.source, myClientID, 31);
+	packetMessage.size = 0;
+
+	//serialize
+	char serializedMessage[400] = {"\0"};
+	serialize(packetMessage, serializedMessage);
+
+	//Sending the message nini to server
+	if(send(serverFD, serializedMessage, sizeof(serializedMessage), 0) < 0){
+		printf("There was an error in sending\n");
+		return -1;
+	}
+	printf("sent leave session message to server\n");
+	return 0;
+}
+
+//make logout struct
+int makeQueryMessage(char* totalCommand){
+	//create message packet struct
+	message packetMessage;
+	packetMessage.type = QUERY;
+	memcpy(packetMessage.source, myClientID, 31);
+	packetMessage.size = 0;
+
+	//serialize
+	char serializedMessage[400] = {"\0"};
+	serialize(packetMessage, serializedMessage);
+
+	//Sending the message nini to server
+	if(send(serverFD, serializedMessage, sizeof(serializedMessage), 0) < 0){
+		printf("There was an error in sending\n");
+		return -1;
+	}
+	printf("sent leave session message to server\n");
+	return 0;
+}
+
+int makeMessage(char* totalCommand){
+	//create message packet struct
+	message packetMessage;
+	packetMessage.type = MESSAGE;
+	memcpy(packetMessage.source, myClientID, 31);
+	memcpy(packetMessage.data, totalCommand, 301);
+	packetMessage.size = 301;
+
+	//serialize
+	char serializedMessage[400] = {"\0"};
+	serialize(packetMessage, serializedMessage);
+
+	//Sending the message nini to server
+	if(send(serverFD, serializedMessage, sizeof(serializedMessage), 0) < 0){
+		printf("There was an error in sending\n");
+		return -1;
+	}
+	printf("sent joinsession message to server\n");
+	return 0;
 }
