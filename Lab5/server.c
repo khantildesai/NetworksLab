@@ -28,7 +28,7 @@
 #define NEW_ACC_ACK 14
 #define NEW_ACC_NACK 15
 
-#define COMMANDINPUTSIZE 301 //command line input size
+#define COMMANDINPUTSIZE 31 //command line input size
 
 #define MAX_NAME 31 //30 char max username
 #define MAX_DATA 301 //300 max data (one line)
@@ -46,9 +46,10 @@ typedef struct user{
     char clientID[MAX_NAME];
     char password[MAX_NAME];
     char sessionID[MAX_NAME];
+    int online;
 } user;
 
-user list_of_users[4] = {{"Joel", "0000", "general"}, {"Khantil", "1234", "general"}, {"Jane", "1111", "general"}, {"Natalie", "Khantil", "general"}};
+user list_of_users[4] = {{"Joel", "0000", "general", 0}, {"Khantil", "1234", "general", 0}, {"Jane", "1111", "general", 0}, {"Natalie", "Khantil", "general", 0}};
 
 //keywords for commands
 const char login[] = "/login";
@@ -165,12 +166,24 @@ int handleNini(int clientFD){
         return -1;
     }
     printf("%s", client_buffer);
-    firstword = strtok(client_buffer, delim);
-    if(strcmp(firstword, check) == 0){
-        if(send(clientFD, server_response, strlen(server_response), 0) < 0){
-            printf("The server failed at responding.");
+
+    message received_message = deSerialize(client_buffer);
+
+    if(received_message.type == LOGIN){
+        int index;
+        for(int i = 0; i<4; i++){
+            if(strcmp())
         }
     }
+    
+
+    //OLD CODE (helpful)
+    // firstword = strtok(client_buffer, delim);
+    // if(strcmp(firstword, check) == 0){
+    //     if(send(clientFD, server_response, strlen(server_response), 0) < 0){
+    //         printf("The server failed at responding.");
+    //     }
+    // }
     memset(client_buffer, '\0', sizeof(client_buffer));
     memset(server_response, '\0', sizeof(server_response));
 }
