@@ -8,6 +8,8 @@
 #include <sys/time.h>
 #include <time.h>
 
+#define STDIN 0 //shity titty
+
 #define COMMANDINPUTSIZE 301 //command line input size
 
 #define MAX_NAME 31 //30 char max username
@@ -74,10 +76,12 @@ message deSerialize(char* serialArr);
 int connectToServer(int portNum);
 
 //make login struct
-message makeLoginMessage(char* totalCommand);
+int makeLoginMessage(char* totalCommand);
 
 int main(void){
-	int FileDescriptor = connectToServer(2000);
+	int FileDescriptor = connectToServer(5000);
+
+	fd_set all_sockets, prepared_sockets;
 
 	while(1){// main loop
 		//buffers
@@ -86,10 +90,50 @@ int main(void){
 		//Clean buffers
 		memset(input_buffer, '\0', COMMANDINPUTSIZE);
 		memset(command_buffer, '\0', COMMANDINPUTSIZE);
+		
+		fd_set readfds;
 
-		fgets(input_buffer, COMMANDINPUTSIZE, stdin); //get input
-		memcpy(message_buffer, input_buffer, COMMANDINPUTSIZE);
+		FD_ZERO(&readfds);
+		FD_SET(STDIN, &readfds);
+		FD_SET(FileDescriptor, &readfds);
 
+		select(FD_SETSIZE, &readfds, NULL, NULL, NULL);
+
+		if(FD_ISSET(STDIN, &readfds)){
+			//there was keyboard input
+			fgets(input_buffer, COMMANDINPUTSIZE, stdin); //get input
+			memcpy(message_buffer, input_buffer, COMMANDINPUTSIZE);
+
+			if(send(FileDescriptor, message_buffer, sizeof(message_buffer), 0) < 0){
+				printf("There was an error in sending\n");
+				//return -1;
+			}
+		}
+		for(int iter = 0; iter < FD_SETSIZE; iter++){
+            if (FD_ISSET(iter, &readfds)){
+                if(iter != 0){
+                    printf("recieved message from server\n");
+					
+					
+					//Creating the buffers right here
+					char client_buffer[COMMANDINPUTSIZE];
+
+					//Clean buffers
+					memset(client_buffer, '\0', sizeof(client_buffer));
+
+					if(recv(FileDescriptor, client_buffer, sizeof(client_buffer), 0) < 0){
+						printf("Ya I couldn't receive\n");
+					}
+
+					printf("%s\n", client_buffer);
+					memset(client_buffer, '\0', sizeof(client_buffer));
+                }
+            }
+        }
+
+		//fgets(input_buffer, COMMANDINPUTSIZE, stdin); //get input
+		//memcpy(message_buffer, input_buffer, COMMANDINPUTSIZE);
+		
 		char *firstCommand = strtok(input_buffer, delim); //get first command
 
 		if (validInput(firstCommand, input_buffer) == 0){ //check if valid
@@ -99,20 +143,24 @@ int main(void){
 			printf("not valid\n");
 		}
 
-		//Sending the message nini to server
+		/*//Sending the message nini to server
 		if(send(FileDescriptor, message_buffer, sizeof(message_buffer), 0) < 0){
 			printf("There was an error in sending\n");
 			//return -1;
-		}
+		}*/
 
 		memset(input_buffer, '\0', COMMANDINPUTSIZE); //reset message buffer
+
+		//here
     }
 }
 
 int validInput(char* command, char* totalCommand){
 	//check if input is a command and if globals variables indicate that the command is valid
 	if (strcmp(command, login) == 0){
-		if (loggedIn == -1){ return 0;}
+		if (loggedIn == -1){ 
+			if (makeLoginMessage(totalCommand) < 0) {printf("failed login\n"); return -1;}
+			return 0;}
 		else {return -1;}}
 	else if (strcmp(command, logout) == 0){
 		if (loggedIn == 1){ return 0;}
@@ -181,7 +229,7 @@ int connectToServer(int portNum){
 	return FileDescriptor;
 }
 
-message makeLoginMessage(char* totalCommand){
+int makeLoginMessage(char* totalCommand){
 	int valid = 0; //0 = valid
 
 	//get login parameters
@@ -204,26 +252,24 @@ message makeLoginMessage(char* totalCommand){
 
 	//create Message Packet struct
 	if (valid != 1){
-		message packetMessage;
-		packetMessage.type = -1;
-		return packetMessage;
+		return -1;
 	}
 	else {
-		//make login message and find its length
-		char loginMessage[65];
-		strcat(loginMessage, clientID);
-		int index = strlen(clientID);
-		loginMessage[index] = ':';
-		strcat(loginMessage + index + 1, password);
-		int loginMessageLen = strlen(clientID) + 1 + strlen(password);
-
 		//create message packet struct
 		message packetMessage;
 		packetMessage.type = LOGIN;
-		packetMessage.size = loginMessageLen;
+		packetMessage.size = sizeof(message);
 		memcpy(packetMessage.source, clientID, strlen(clientID));
-		memcpy(packetMessage.data, loginMessage, loginMessageLen);
+		memcpy(packetMessage.data, password, strlen(password));
 
-		return packetMessage;
+		//serialize
+		char serializedMessage[400] = {"\0"};
+		serialize(packetMessage, serializedMessage);
+
+		//Sending the message nini to server
+		if(send(loginFD, serializedMessage, sizeof(serializedMessage), 0) < 0){
+			printf("There was an error in sending\n");
+			//return -1;
+		}
 	}
 }

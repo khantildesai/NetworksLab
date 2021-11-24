@@ -10,6 +10,24 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
+//macros for messages types
+#define LOGIN 0
+#define LO_ACK 1
+#define LO_NACK 2
+#define EXIT 3
+#define JOIN 4
+#define JN_ACK 5
+#define JN_NACK 6
+#define LEAVE_SESS 7
+#define NEW_SESS 8
+#define NS_ACK 9
+#define MESSAGE 10
+#define QUERY 11
+#define QU_ACK 12
+#define NEW_ACC 13
+#define NEW_ACC_ACK 14
+#define NEW_ACC_NACK 15
+
 #define COMMANDINPUTSIZE 301 //command line input size
 
 #define MAX_NAME 31 //30 char max username
@@ -32,6 +50,14 @@ typedef struct user{
 
 user list_of_users[4] = {{"Joel", "0000", "general"}, {"Khantil", "1234", "general"}, {"Jane", "1111", "general"}, {"Natalie", "Khantil", "general"}};
 
+//keywords for commands
+const char login[] = "/login";
+const char logout[] = "/logout";
+const char joinsession[] = "/joinsession";
+const char leavesession[] = "/leavesession";
+const char createsession[] = "/createsession";
+const char list[] = "/list";
+const char quit[] = "/quit";
 
 int acceptConnect(int listeningFD);
 int setup_listen(int portNum);
@@ -60,7 +86,7 @@ int main(int argc, char *argv[]){
     //initialize sets
     FD_ZERO(&all_sockets);
     FD_SET(FileDescriptor, &all_sockets);
-
+    int testflag = 0;
     while(1){
         prepared_sockets = all_sockets;
 
@@ -71,29 +97,22 @@ int main(int argc, char *argv[]){
 
         for(int iter = 0; iter < FD_SETSIZE; iter++){
             if (FD_ISSET(iter, &prepared_sockets)){
+                printf("coudl it be here?\n");
                 if (iter == FileDescriptor){
                     //accepting this connection request
                     int new_con = acceptConnect(FileDescriptor);
                     FD_SET(new_con, &all_sockets);
                 } else {
+                    // if (testflag == 1){
+                    //     printf("exitting here!\n");
+                    //     exit(1);
+                    // }
+                    printf("just before entering the nini\n");
                     handleNini(iter);
+                    //FD_CLR(iter, &all_sockets);
                 }
             }
         }
-        /*
-        //Creating the buffers right here
-        char server_buffer[COMMANDINPUTSIZE], client_buffer[COMMANDINPUTSIZE];
-
-        //Clean buffers
-        memset(server_buffer, '\0', sizeof(server_buffer));
-        memset(client_buffer, '\0', sizeof(client_buffer));
-
-        if(recv(clientFD, client_buffer, sizeof(client_buffer), 0) < 0){
-            printf("Ya I couldn't receive\n");
-            return -1;
-        }
-        printf("%s", client_buffer);
-        memset(client_buffer, '\0', sizeof(client_buffer));*/
     }
 }
 
@@ -141,16 +160,37 @@ int setup_listen(int portNum){
 
 void handleNini(int clientFD){
     //Creating the buffers right here
+    printf("here\n");
     char client_buffer[COMMANDINPUTSIZE];
+    char server_response[COMMANDINPUTSIZE] = "login success";
+    const char check[] = "login";
+    const char delim[] = " ";
+    char *firstword;
+    printf("gets here\n");
 
-    //Clean buffers
-    memset(client_buffer, '\0', sizeof(client_buffer));
+    int numBytesRecv;
 
-    if(recv(clientFD, client_buffer, sizeof(client_buffer), 0) < 0){
+    numBytesRecv = recv(clientFD, client_buffer, sizeof(client_buffer), 0);
+    if (numBytesRecv == 0){
         printf("Ya I couldn't receive\n");
     }
-    printf("%s", client_buffer);
+    printf("client buffer: %s\n", client_buffer);
+    firstword = strtok(client_buffer, delim);
+    if(strcmp(firstword, check) == 0){
+        printf("we have entered here\n");
+        printf("client buffer now: %s\n", client_buffer);
+        if(send(clientFD, server_response, strlen(server_response), 0) < 0){
+            printf("The server failed at responding.");
+        }
+    }
+    printf("I think problem is gonna start here\n");
+
+    
+    
+
+    
     memset(client_buffer, '\0', sizeof(client_buffer));
+    memset(server_response, '\0', sizeof(server_response));
 }
 
 void serialize(message messagePacket, char* serialArr){
