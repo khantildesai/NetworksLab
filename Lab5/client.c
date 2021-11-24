@@ -136,11 +136,6 @@ int main(void){
 				printf("not valid\n");
 			}
 
-			//if(send(FileDescriptor, message_buffer, sizeof(message_buffer), 0) < 0){
-			//	printf("There was an error in sending\n");
-			//	//return -1;
-			//}
-
 			memset(input_buffer, '\0', COMMANDINPUTSIZE); //reset message buffer
 		}
 		for(int iter = 0; iter < FD_SETSIZE; iter++){
@@ -158,6 +153,11 @@ int main(void){
 						close(iter);
 						FD_CLR(iter, &all_sockets);
 						exit(0);
+					}
+					else {
+						//deal with packet from server
+						message serverMessage = deSerialize(client_buffer);
+						//int ok = handleServerMessage(serverMessage);
 					}
 
 					printf("%s\n", client_buffer);
