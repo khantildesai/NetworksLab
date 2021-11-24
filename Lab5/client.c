@@ -104,54 +104,44 @@ int main(void){
 			fgets(input_buffer, COMMANDINPUTSIZE, stdin); //get input
 			memcpy(message_buffer, input_buffer, COMMANDINPUTSIZE);
 
+			char *firstCommand = strtok(input_buffer, delim); //get first command
+
+			if (validInput(firstCommand, input_buffer) == 0){ //check if valid
+				//printf("its valid\n");
+			}
+			else {
+				printf("not valid\n");
+			}
+
 			if(send(FileDescriptor, message_buffer, sizeof(message_buffer), 0) < 0){
 				printf("There was an error in sending\n");
 				//return -1;
 			}
+
+			memset(input_buffer, '\0', COMMANDINPUTSIZE); //reset message buffer
 		}
 		for(int iter = 0; iter < FD_SETSIZE; iter++){
             if (FD_ISSET(iter, &readfds)){
                 if(iter != 0){
-                    printf("recieved message from server\n");
-					
-					
 					//Creating the buffers right here
 					char client_buffer[COMMANDINPUTSIZE];
 
 					//Clean buffers
 					memset(client_buffer, '\0', sizeof(client_buffer));
 
-					if(recv(FileDescriptor, client_buffer, sizeof(client_buffer), 0) < 0){
-						printf("Ya I couldn't receive\n");
+					int res = recv(FileDescriptor, client_buffer, sizeof(client_buffer), 0);
+
+					if(res == 0){
+						close(iter);
+						FD_CLR(iter, &readfds);
+						exit(0);
 					}
 
 					printf("%s\n", client_buffer);
 					memset(client_buffer, '\0', sizeof(client_buffer));
                 }
             }
-        }
-
-		//fgets(input_buffer, COMMANDINPUTSIZE, stdin); //get input
-		//memcpy(message_buffer, input_buffer, COMMANDINPUTSIZE);
-		
-		char *firstCommand = strtok(input_buffer, delim); //get first command
-
-		if (validInput(firstCommand, input_buffer) == 0){ //check if valid
-			//printf("its valid\n");
 		}
-		else {
-			printf("not valid\n");
-		}
-
-		/*//Sending the message nini to server
-		if(send(FileDescriptor, message_buffer, sizeof(message_buffer), 0) < 0){
-			printf("There was an error in sending\n");
-			//return -1;
-		}*/
-
-		memset(input_buffer, '\0', COMMANDINPUTSIZE); //reset message buffer
-
-		//here
     }
 }
 
@@ -212,7 +202,7 @@ int connectToServer(int portNum){
 	int FileDescriptor = socket(AF_INET, SOCK_STREAM, 0);
 	if(FileDescriptor < 0){
 		printf("You messed up in sockeet\n"); return -1;}
-	printf("Socket is looking good\n");
+	//printf("Socket is looking good\n");
 
 	struct sockaddr_in server_address;
 
@@ -225,7 +215,7 @@ int connectToServer(int portNum){
 		printf("the nini could not connect\n");
 		return -1;
 	}
-	printf("connected successfully\n");
+	printf("Ready!\n");
 	return FileDescriptor;
 }
 

@@ -61,7 +61,7 @@ const char quit[] = "/quit";
 
 int acceptConnect(int listeningFD);
 int setup_listen(int portNum);
-void handleNini(int clientFD);
+int handleNini(int clientFD);
 
 //serialize messages function
 void serialize(message messagePacket, char* serialArr);
@@ -75,11 +75,8 @@ int main(int argc, char *argv[]){
         return 1;
     }
     int portNum = atoi(argv[1]);
-    printf("%d\n", portNum);
 
     int FileDescriptor = setup_listen(portNum);
-
-    //int clientFD = acceptConnect(FileDescriptor);
 
     fd_set all_sockets, prepared_sockets;
 
@@ -97,19 +94,15 @@ int main(int argc, char *argv[]){
 
         for(int iter = 0; iter < FD_SETSIZE; iter++){
             if (FD_ISSET(iter, &prepared_sockets)){
-                printf("coudl it be here?\n");
                 if (iter == FileDescriptor){
                     //accepting this connection request
                     int new_con = acceptConnect(FileDescriptor);
                     FD_SET(new_con, &all_sockets);
                 } else {
-                    // if (testflag == 1){
-                    //     printf("exitting here!\n");
-                    //     exit(1);
-                    // }
-                    printf("just before entering the nini\n");
-                    handleNini(iter);
-                    //FD_CLR(iter, &all_sockets);
+                    if (handleNini(iter) == -1){
+                        close(iter);
+                        FD_CLR(iter, &all_sockets);
+                    }
                 }
             }
         }
@@ -129,8 +122,6 @@ int acceptConnect(int listeningFD){
     if(!(listen(listeningFD, 7))){
         new_socket = accept(listeningFD, (struct sockaddr *)storageAddressPtr, addressSizePtr);
     }
-    printf("new_socket\n");  //Might want to remove this later on.
-
     return new_socket;
 }
 
@@ -158,37 +149,28 @@ int setup_listen(int portNum){
     return FileDescriptor;  
 }
 
-void handleNini(int clientFD){
+int handleNini(int clientFD){
     //Creating the buffers right here
-    printf("here\n");
     char client_buffer[COMMANDINPUTSIZE];
     char server_response[COMMANDINPUTSIZE] = "login success";
     const char check[] = "login";
     const char delim[] = " ";
     char *firstword;
-    printf("gets here\n");
 
     int numBytesRecv;
 
     numBytesRecv = recv(clientFD, client_buffer, sizeof(client_buffer), 0);
     if (numBytesRecv == 0){
-        printf("Ya I couldn't receive\n");
+        printf("connect broken :(\n");
+        return -1;
     }
-    printf("client buffer: %s\n", client_buffer);
+    printf("%s", client_buffer);
     firstword = strtok(client_buffer, delim);
     if(strcmp(firstword, check) == 0){
-        printf("we have entered here\n");
-        printf("client buffer now: %s\n", client_buffer);
         if(send(clientFD, server_response, strlen(server_response), 0) < 0){
             printf("The server failed at responding.");
         }
     }
-    printf("I think problem is gonna start here\n");
-
-    
-    
-
-    
     memset(client_buffer, '\0', sizeof(client_buffer));
     memset(server_response, '\0', sizeof(server_response));
 }
