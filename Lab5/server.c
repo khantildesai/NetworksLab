@@ -28,7 +28,7 @@
 #define NEW_ACC_ACK 14
 #define NEW_ACC_NACK 15
 
-#define COMMANDINPUTSIZE 31 //command line input size
+#define COMMANDINPUTSIZE 301 //command line input size
 
 #define MAX_NAME 31 //30 char max username
 #define MAX_DATA 301 //300 max data (one line)
@@ -46,10 +46,9 @@ typedef struct user{
     char clientID[MAX_NAME];
     char password[MAX_NAME];
     char sessionID[MAX_NAME];
-    int online;
 } user;
 
-user list_of_users[4] = {{"Joel", "0000", "general", 0}, {"Khantil", "1234", "general", 0}, {"Jane", "1111", "general", 0}, {"Natalie", "Khantil", "general", 0}};
+user list_of_users[4] = {{"Joel", "0000", "general"}, {"Khantil", "1234", "general"}, {"Jane", "1111", "general"}, {"Natalie", "Khantil", "general"}};
 
 //keywords for commands
 const char login[] = "/login";
@@ -152,8 +151,8 @@ int setup_listen(int portNum){
 
 int handleNini(int clientFD){
     //Creating the buffers right here
-    char client_buffer[COMMANDINPUTSIZE];
-    char server_passed[COMMANDINPUTSIZE] = "login success";
+    char client_buffer[400];
+    char server_response[400] = "login success";
     const char check[] = "login";
     const char delim[] = " ";
     char *firstword;
@@ -165,28 +164,18 @@ int handleNini(int clientFD){
         printf("connect broken :(\n");
         return -1;
     }
-    printf("%s", client_buffer);
 
-    message received_message = deSerialize(client_buffer);
+    message first = deSerialize(client_buffer);
 
-    if(received_message.type == LOGIN){
-        int index;
-        for(int i = 0; i<4; i++){
-            if(strcmp(received_message.source, list_of_users[i].clientID) == 0){
-                index = i;
-            }
-        }
-        if(strcmp)
-    }
-    
+    printf("%s\n",first.source);
+    printf("%s\n",first.data);
+    //firstword = strtok(client_buffer, delim);
 
-    //OLD CODE (helpful)
-    // firstword = strtok(client_buffer, delim);
-    // if(strcmp(firstword, check) == 0){
-    //     if(send(clientFD, server_response, strlen(server_response), 0) < 0){
-    //         printf("The server failed at responding.");
-    //     }
-    // }
+    //if(strcmp(firstword, check) == 0){
+    //    if(send(clientFD, server_response, strlen(server_response), 0) < 0){
+    //        printf("The server failed at responding.");
+    //    }
+    //}
     memset(client_buffer, '\0', sizeof(client_buffer));
     memset(server_response, '\0', sizeof(server_response));
 }
@@ -209,8 +198,10 @@ message deSerialize(char* serialArr){
 	memcpy(&toReturn.size, serialArr + sizeof(unsigned int), sizeof(unsigned int));
 
 	//source
-	memcpy(&toReturn.source, serialArr + 2*sizeof(unsigned int), MAX_NAME*sizeof(unsigned int));
+	memcpy(&toReturn.source, serialArr + 2*sizeof(unsigned int), MAX_NAME*sizeof(unsigned char));
 
 	//data
-	memcpy(&toReturn.data, serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), MAX_DATA*sizeof(unsigned char));
+	memcpy(&toReturn.data, serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), toReturn.size);
+
+    return toReturn;
 }
