@@ -165,10 +165,29 @@ int handleNini(int clientFD){
         return -1;
     }
 
-    message first = deSerialize(client_buffer);
+    message received_message = deSerialize(client_buffer);
 
-    printf("%s\n",first.source);
-    printf("%s\n",first.data);
+    printf("%d\n", received_message.type);
+    printf("&d\n", received_message.size);
+    printf("%s\n",received_message.source);
+    printf("%s\n",received_message.data);
+
+    printf("string length in database: %d\n", strlen(list_of_users[0].clientID));
+    printf("string length of the sent message username: %d\n", strlen(received_message.source));
+
+    if(received_message.type == LOGIN){
+        printf("it is login command\n");
+        int index = -1;
+        for(int i = 0; i < 4; i++){
+            if(strcmp(list_of_users[i].clientID, received_message.source) == 0){
+                printf("username valid\n");
+                index = i;
+            }
+        }
+        if(index == -1){
+            printf("username not valid\n");
+        }
+    }
     //firstword = strtok(client_buffer, delim);
 
     //if(strcmp(firstword, check) == 0){
@@ -178,6 +197,8 @@ int handleNini(int clientFD){
     //}
     memset(client_buffer, '\0', sizeof(client_buffer));
     memset(server_response, '\0', sizeof(server_response));
+    memset(received_message.source, '\0', sizeof(received_message.source));
+    memset(received_message.data, '\0', sizeof(received_message.data));
 }
 
 void serialize(message messagePacket, char* serialArr){
