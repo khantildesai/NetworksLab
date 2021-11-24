@@ -151,7 +151,7 @@ int setup_listen(int portNum){
 
 int handleNini(int clientFD){
     //Creating the buffers right here
-    char client_buffer[400];
+    char client_buffer[400] = {'\0'};
     char server_response[400] = "login success";
     const char check[] = "login";
     const char delim[] = " ";

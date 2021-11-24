@@ -149,6 +149,10 @@ int main(void){
 
 					int res = recv(iter, client_buffer, sizeof(client_buffer), 0);
 
+					message recievedMessage = deSerialize(client_buffer);
+
+					//int okay = handle(recievedMessage);
+
 					if(res == 0){
 						close(iter);
 						FD_CLR(iter, &all_sockets);
@@ -212,10 +216,12 @@ int validInput(char* command, char* totalCommand){
 }
 
 void serialize(message messagePacket, char* serialArr){
+	memset(serialArr, '\0', 400);
 	memcpy(serialArr, &messagePacket.type, sizeof(unsigned int)); //type
 	memcpy(serialArr + sizeof(unsigned int), &(messagePacket.size), sizeof(unsigned int)); //size
-	memcpy(serialArr + 2*sizeof(unsigned int), &(messagePacket.source), MAX_NAME*sizeof(unsigned char)); //source
-	memcpy(serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), &(messagePacket.data), messagePacket.size); //data
+	printf("In serialize: %s\n", messagePacket.source);
+	memcpy(serialArr + 2*sizeof(unsigned int), &(messagePacket.source), MAX_NAME*sizeof(unsigned int)); //source
+	memcpy(serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned int), &(messagePacket.data), messagePacket.size); //data
 }
 
 message deSerialize(char* serialArr){
@@ -287,14 +293,20 @@ int makeLoginMessage(char* totalCommand){
 	else {
 		//create message packet struct
 		message packetMessage;
+		memset(packetMessage.source, '\0', MAX_NAME);
+		memset(packetMessage.data, '\0', MAX_DATA);
 		packetMessage.type = LOGIN;
 		memcpy(packetMessage.source, clientID, strlen(clientID));
+		printf("%s\n", clientID);
 		memcpy(packetMessage.data, password, strlen(password));
 		packetMessage.size = strlen(packetMessage.data);
 
 		//serialize
-		char serializedMessage[400] = {"\0"};
+		char serializedMessage[400] = {'\0'};
 		serialize(packetMessage, serializedMessage);
+
+		message test = deSerialize(serializedMessage);
+		printf("%s\n", test.source);
 
 		//Sending the message nini to server
 		if(send(loginFD, serializedMessage, sizeof(serializedMessage), 0) < 0){
