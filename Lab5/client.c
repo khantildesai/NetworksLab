@@ -120,14 +120,20 @@ int receivedNSAck(message fromServer);
 //handle message
 int receivedMessage(message fromServer);
 
+fd_set all_sockets;
+fd_set prepared_sockets;
+
 int main(void){
 	//int FileDescriptor = connectToServer(5000);
 
-	fd_set all_sockets, prepared_sockets;
+	FD_ZERO(&all_sockets);
+	FD_SET(STDIN, &all_sockets); // only STDIN at first
+
+	/*fd_set all_sockets, prepared_sockets;
 
 	FD_ZERO(&all_sockets);
 	FD_SET(STDIN, &all_sockets); // only STDIN at first
-	//FD_SET(FileDescriptor, &readfds);
+	//FD_SET(FileDescriptor, &readfds);*/
 
 	while(1){// main loop
 		//prepared_sockets to protect all_sockets from destructive select
@@ -163,16 +169,20 @@ int main(void){
             if (FD_ISSET(iter, &prepared_sockets)){
                 if(iter != 0){
 					//Creating the buffers right here
-					char client_buffer[COMMANDINPUTSIZE];
+					char client_buffer[400];
 
 					//Clean buffers
-					memset(client_buffer, '\0', sizeof(client_buffer));
+					memset(client_buffer, '\0', 400);
 
-					int res = recv(iter, client_buffer, sizeof(client_buffer), 0);
+					int res = recv(iter, client_buffer, 400, 0);
 
 					message recievedMessage = deSerialize(client_buffer);
 
-					//int okay = handle(recievedMessage);
+					printf("type: %d\n", recievedMessage.type);
+					printf("data: %s\n", recievedMessage.source);
+					printf("size: %d\n", recievedMessage.size);
+
+					int okay = handle(recievedMessage);
 
 					if(res == 0){
 						close(iter);
@@ -181,12 +191,12 @@ int main(void){
 					}
 					else {
 						//deal with packet from server
-						message serverMessage = deSerialize(client_buffer);
+						//message serverMessage = deSerialize(client_buffer);
 						//int ok = handleServerMessage(serverMessage);
 					}
 
-					printf("%s\n", client_buffer);
-					memset(client_buffer, '\0', sizeof(client_buffer));
+					//printf("%s\n", client_buffer);
+					//memset(client_buffer, '\0', sizeof(client_buffer));
                 }
             }
 		}
@@ -199,7 +209,7 @@ int validInput(char* command, char* totalCommand){
 		if (loggedIn == -1){
 			int shit = makeLoginMessage(totalCommand);
 			if (shit < 0) {printf("failed login\n"); return -1; }
-			serverFD = shit; return 0;}
+			serverFD = shit; FD_SET(serverFD, &all_sockets); return 0;}
 		else {return -1;}}
 	else if (strcmp(command, logout) == 0){
 		if (loggedIn == 1){ 
@@ -256,12 +266,12 @@ message deSerialize(char* serialArr){
 	memcpy(&toReturn.size, serialArr + sizeof(unsigned int), sizeof(unsigned int));
 
 	//source
-	memcpy(&toReturn.source, serialArr + 2*sizeof(unsigned int), MAX_NAME*sizeof(unsigned int));
+	memcpy(&toReturn.source, serialArr + 2*sizeof(unsigned int), MAX_NAME*sizeof(unsigned char));
 
 	//data
-	memcpy(&toReturn.data, serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), MAX_DATA*sizeof(unsigned char));
+	memcpy(&toReturn.data, serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), toReturn.size);
 
-	return toReturn;
+    return toReturn;
 }
 
 int connectToServer(int portNum){
@@ -485,6 +495,7 @@ int makeMessage(char* totalCommand){
 
 int handle(message fromServer){
 	int ok = 0;
+	printf("server type: %d\n", fromServer.type);
 	switch (fromServer.type)
 	{
 	case LO_ACK:

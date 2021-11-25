@@ -185,6 +185,20 @@ int handleNini(int clientFD){
             }
         }
         if(index == -1){
+            message reply_message;
+            reply_message.type = 3452;
+            reply_message.size = strlen("wrong username!");
+            strcpy(reply_message.source, "server");
+            memcpy(reply_message.data, "wrong username!", reply_message.size);
+            char serializedMessage[400] = {'\0'};
+            serialize(reply_message, serializedMessage);
+            message test = deSerialize(serializedMessage);
+            printf("test.source = %s\n", test.source);
+            printf("test.data = %s\n", test.data);
+            printf("test.size = %d\n", test.size);
+            if(send(clientFD, serializedMessage, strlen(serializedMessage), 0) < 0){
+                printf("The server failed at responding.");
+            }
             printf("username not valid\n");
         }else{
             
@@ -204,10 +218,11 @@ int handleNini(int clientFD){
 }
 
 void serialize(message messagePacket, char* serialArr){
+	memset(serialArr, '\0', 400);
 	memcpy(serialArr, &messagePacket.type, sizeof(unsigned int)); //type
 	memcpy(serialArr + sizeof(unsigned int), &(messagePacket.size), sizeof(unsigned int)); //size
-	memcpy(serialArr + 2*sizeof(unsigned int), &(messagePacket.source), MAX_NAME*sizeof(unsigned char)); //source
-	memcpy(serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), &(messagePacket.data), MAX_DATA*sizeof(unsigned char)); //data
+	memcpy(serialArr + 2*sizeof(unsigned int), &(messagePacket.source), MAX_NAME*sizeof(unsigned int)); //source
+	memcpy(serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned int), &(messagePacket.data), messagePacket.size); //data
 }
 
 message deSerialize(char* serialArr){
