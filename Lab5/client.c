@@ -29,9 +29,6 @@
 #define MESSAGE 10
 #define QUERY 11
 #define QU_ACK 12
-#define NEW_ACC 13
-#define NEW_ACC_ACK 14
-#define NEW_ACC_NACK 15
 
 int serverFD;
 char* myClientID[31] = {'\0'};
@@ -98,6 +95,30 @@ int makeQueryMessage(char* totalCommand);
 
 //make message struct
 int makeMessage(char* totalCommand);
+
+//handle messages from server
+int handle(message fromServer);
+
+//handle LO_ACK
+int receivedLoginAck(message fromServer);
+
+//handle LO_NACK
+int receivedLoginNack(message fromServer);
+
+//handle JN_ACK
+int receivedJoinAck(message fromServer);
+
+//handle JN_NACK
+int receivedJoinNack(message fromServer);
+
+//handle Query Ack
+int receivedQAck(message fromServer);
+
+//handle NS Ack
+int receivedNSAck(message fromServer);
+
+//handle message
+int receivedMessage(message fromServer);
 
 int main(void){
 	//int FileDescriptor = connectToServer(5000);
@@ -177,7 +198,7 @@ int validInput(char* command, char* totalCommand){
 	if (strcmp(command, login) == 0){
 		if (loggedIn == -1){
 			int shit = makeLoginMessage(totalCommand);
-			if (serverFD < 0) {printf("failed login\n"); return -1; }
+			if (shit < 0) {printf("failed login\n"); return -1; }
 			serverFD = shit; return 0;}
 		else {return -1;}}
 	else if (strcmp(command, logout) == 0){
@@ -297,7 +318,6 @@ int makeLoginMessage(char* totalCommand){
 		memset(packetMessage.data, '\0', MAX_DATA);
 		packetMessage.type = LOGIN;
 		memcpy(packetMessage.source, clientID, strlen(clientID));
-		printf("%s\n", clientID);
 		memcpy(packetMessage.data, password, strlen(password));
 		packetMessage.size = strlen(packetMessage.data);
 
@@ -322,6 +342,7 @@ int makeLoginMessage(char* totalCommand){
 //make logout struct
 int makeLogoutMessage(char* totalCommand){
 	close(serverFD);
+	loggedIn = -1;
 	return -15;
 }
 
@@ -416,6 +437,7 @@ int makeLeaveSessionMessage(char* totalCommand){
 		return -1;
 	}
 	printf("sent leave session message to server\n");
+	inSession = -1;
 	return 0;
 }
 
@@ -458,5 +480,80 @@ int makeMessage(char* totalCommand){
 		return -1;
 	}
 	printf("sent joinsession message to server\n");
+	return 0;
+}
+
+int handle(message fromServer){
+	int ok = 0;
+	switch (fromServer.type)
+	{
+	case LO_ACK:
+		ok = receivedLoginAck(fromServer);
+		break;
+
+	case LO_NACK:
+		ok = receivedLoginNack(fromServer);
+		break;
+
+	case JN_ACK:
+		ok= receivedJoinAck(fromServer);
+		break;
+
+	case JN_NACK:
+		ok = receivedJoinNack(fromServer);
+		break;
+
+	case NS_ACK:
+		ok = receivedNSAck(fromServer);
+		break;
+	
+	case QU_ACK:
+		ok = receivedQAck(fromServer);
+		break;
+
+	case MESSAGE:
+		ok = receivedMessage(fromServer);
+		break;
+	
+	default:
+		printf("Client shouldn't recieved this packets!\n");
+		return -1;
+		break;
+	}
+	return ok;
+}
+
+int receivedLoginAck(message fromServer){
+	loggedIn = 1;
+	return 0;
+}
+
+int receivedLoginNack(message fromServer){
+	printf("there was a login issue: %s\n", fromServer.data);
+	return 0;
+}
+
+int receivedJoinAck(message fromServer){
+	inSession = 1;
+	return 0;
+}
+
+int receivedJoinNack(message fromServer){
+	printf("there was a join issue: %s\n", fromServer.data);
+	return 0;
+}
+
+int receivedNSAck(message fromServer){
+	inSession = 1;
+	return 0;
+}
+
+int receivedQAck(message fromServer){
+	printf("Users: %s\n", fromServer.data);
+	return 0;
+}
+
+int receivedMessage(message fromServer){
+	printf("%s\n", fromServer.data);
 	return 0;
 }
