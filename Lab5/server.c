@@ -463,7 +463,7 @@ int handleNini(int clientFD){
         }
     }
 
-    if(received_message.type == PASS_ACK){
+    if(received_message.type == PASS){
         int index_of_session = -1;
         int index = findIndex(received_message.data);
         for(int i = 0; i < number_of_sessions; i++){
