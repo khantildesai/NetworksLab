@@ -378,6 +378,7 @@ int handleNini(int clientFD){
             strcat(packet_data, list_of_sessions[i].sessionID);
             strcat(packet_data, ": ");
             strcat(packet_data, list_of_sessions[i].admin);
+            strcat(packet_data, " ");
         }
         
         messageCreator(QU_ACK, "server", packet_data, reply_message);
