@@ -156,7 +156,7 @@ int main(void){
 
 			char *firstCommand = strtok(input_buffer, delim); //get first command
 
-			if (validInput(firstCommand, input_buffer) == 0){ //check if valid
+			if (validInput(firstCommand, message_buffer) == 0){ //check if valid
 				//printf("its valid\n");
 			}
 			else {
@@ -176,10 +176,12 @@ int main(void){
 
 					int res = recv(iter, client_buffer, 400, 0);
 
+					printf("testing raw data: %d %d\n", *client_buffer, *(client_buffer + sizeof(unsigned int)));
+
 					message recievedMessage = deSerialize(client_buffer);
 
 					printf("type: %d\n", recievedMessage.type);
-					printf("data: %s\n", recievedMessage.source);
+					printf("data: %s\n", recievedMessage.data);
 					printf("size: %d\n", recievedMessage.size);
 
 					int okay = handle(recievedMessage);
@@ -205,6 +207,7 @@ int main(void){
 
 int validInput(char* command, char* totalCommand){
 	//check if input is a command and if globals variables indicate that the command is valid
+	printf("total command: %s\n", totalCommand);
 	if (strcmp(command, login) == 0){
 		if (loggedIn == -1){
 			int shit = makeLoginMessage(totalCommand);
@@ -217,30 +220,29 @@ int validInput(char* command, char* totalCommand){
 			return 0;}
 		else {return -1;}}
 	else if (strcmp(command, joinsession) == 0){
-		if ((loggedIn == 1) & inSession == -1){ 
+		printf("%d %d\n", loggedIn, inSession);
+		if ((loggedIn == 1) && inSession == -1){ 
 			if (makeJoinSessionMessage(totalCommand) != 0){ return -1; }
 			return 0; }
 		else { return -1; }}
 	else if (strcmp(command, leavesession) == 0){
-		if ((loggedIn == 1) & inSession == 1){ 
+		printf("flags: %d %d\n", loggedIn, inSession);
+		if ((loggedIn == 1) && inSession == 1){ 
 			if (makeLeaveSessionMessage(totalCommand) != 0){ return -1; }
 			return 0; }
 		else {return -1; }}
 	else if (strcmp(command, createsession) == 0){
-		if ((loggedIn == 1) & inSession == -1){ 
+		if ((loggedIn == 1) && inSession == -1){ 
 			if (makeCreateSessionMessage(totalCommand) != 0){ return -1; }
 			return 0; }
 		else { return -1; }}
 	else if (strcmp(command, list) == 0){
-		if ((loggedIn == 1) & inSession == 1){ 
+		if ((loggedIn == 1) && inSession == 1){ 
 			if (makeQueryMessage(totalCommand) != 0){ return -1; }
 			return 0; }
 		else { return -1; }}
 	else if (strcmp(command, quit) == 0){
-		if ((loggedIn == 1) & inSession == 1){ 
-			exit(0);
-			return 0; }
-		else { return -1; }}
+		exit(0);}
 	else { 
 		if (makeMessage(totalCommand) != 0){ return -1; }
 		return 0; }
@@ -258,6 +260,8 @@ void serialize(message messagePacket, char* serialArr){
 message deSerialize(char* serialArr){
 	//packet to return
 	message toReturn;
+
+	printf("again testing raw %d %d %s %s\n", *serialArr, *(serialArr + sizeof(unsigned int)), serialArr + 2*sizeof(unsigned int), serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char));
 
 	//type
 	memcpy(&toReturn.type, serialArr, sizeof(unsigned int));
@@ -300,8 +304,8 @@ int makeLoginMessage(char* totalCommand){
 	int valid = 0; //0 = valid
 
 	//get login parameters
-	char *clientID = strtok(NULL, delim);
-	char *password = strtok(NULL, delim);
+	char *clientID = strtok(NULL, delim); 
+	char *password = strtok(NULL, delim); printf("password at command line: %s\n", password);
 	char *serverIP = strtok(NULL, delim);
 	char *serverPort = strtok(NULL, delim);
 
@@ -336,7 +340,7 @@ int makeLoginMessage(char* totalCommand){
 		serialize(packetMessage, serializedMessage);
 
 		message test = deSerialize(serializedMessage);
-		printf("%s\n", test.source);
+		printf("test data: %s\n", test.data);
 
 		//Sending the message nini to server
 		if(send(loginFD, serializedMessage, sizeof(serializedMessage), 0) < 0){
@@ -356,7 +360,7 @@ int makeLogoutMessage(char* totalCommand){
 	return -15;
 }
 
-//make logout struct
+//make joinsession struct
 int makeJoinSessionMessage(char* totalCommand){
 	int valid = 0; //0 = valid
 
@@ -381,6 +385,7 @@ int makeJoinSessionMessage(char* totalCommand){
 		//serialize
 		char serializedMessage[400] = {"\0"};
 		serialize(packetMessage, serializedMessage);
+		printf("shit im sending: %s\n", serializedMessage + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char));
 
 		//Sending the message nini to server
 		if(send(serverFD, serializedMessage, sizeof(serializedMessage), 0) < 0){
@@ -392,7 +397,7 @@ int makeJoinSessionMessage(char* totalCommand){
 	}
 }
 
-//make logout struct
+//make create session struct
 int makeCreateSessionMessage(char* totalCommand){
 	int valid = 0; //0 = valid
 
@@ -423,16 +428,18 @@ int makeCreateSessionMessage(char* totalCommand){
 			printf("There was an error in sending\n");
 			return -1;
 		}
-		printf("sent joinsession message to server\n");
+		printf("sent join session message to server\n");
 		return 0;
 	}
 }
 
 
-//make logout struct
+//make leave session struct
 int makeLeaveSessionMessage(char* totalCommand){
 	//create message packet struct
+	printf("leave sesion function\n");
 	message packetMessage;
+	packetMessage.type = 0;
 	packetMessage.type = LEAVE_SESS;
 	memcpy(packetMessage.source, myClientID, 31);
 	packetMessage.size = 0;
@@ -451,9 +458,10 @@ int makeLeaveSessionMessage(char* totalCommand){
 	return 0;
 }
 
-//make logout struct
+//make query struct
 int makeQueryMessage(char* totalCommand){
 	//create message packet struct
+	printf("tryna make query message\n");
 	message packetMessage;
 	packetMessage.type = QUERY;
 	memcpy(packetMessage.source, myClientID, 31);
@@ -473,6 +481,8 @@ int makeQueryMessage(char* totalCommand){
 }
 
 int makeMessage(char* totalCommand){
+	printf("testing what message command gets: %s\n", totalCommand);
+
 	//create message packet struct
 	message packetMessage;
 	packetMessage.type = MESSAGE;
@@ -485,7 +495,7 @@ int makeMessage(char* totalCommand){
 	serialize(packetMessage, serializedMessage);
 
 	//Sending the message nini to server
-	if(send(serverFD, serializedMessage, sizeof(serializedMessage), 0) < 0){
+	if(send(serverFD, serializedMessage, 400, 0) < 0){
 		printf("There was an error in sending\n");
 		return -1;
 	}
@@ -536,6 +546,7 @@ int handle(message fromServer){
 
 int receivedLoginAck(message fromServer){
 	loggedIn = 1;
+	inSession = 1;
 	return 0;
 }
 
@@ -560,7 +571,7 @@ int receivedNSAck(message fromServer){
 }
 
 int receivedQAck(message fromServer){
-	printf("Users: %s\n", fromServer.data);
+	printf("%s\n", fromServer.data);
 	return 0;
 }
 

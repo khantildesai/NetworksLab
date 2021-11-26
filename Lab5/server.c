@@ -46,9 +46,22 @@ typedef struct user{
     char clientID[MAX_NAME];
     char password[MAX_NAME];
     char sessionID[MAX_NAME];
+    int online;
+    int socket;
 } user;
 
-user list_of_users[4] = {{"Joel", "0000", "general"}, {"Khantil", "1234", "general"}, {"Jane", "1111", "general"}, {"Natalie", "Khantil", "general"}};
+//session information struct
+typedef struct session{
+    char sessionID[MAX_NAME];
+    char admin[MAX_NAME];
+} session;
+
+user list_of_users[4] = {{"Joel", "0000", "general", 0, -1}, {"Khantil", "1234", "general", 0, -1}, {"Jane", "1111", "general", 0, -1}, {"Natalie", "Khantil", "general", 0, -1}};
+
+int number_of_sessions = 2;
+
+session list_of_sessions[10] = {{"general", ""}, {"helloworld", ""}};
+
 
 //keywords for commands
 const char login[] = "/login";
@@ -62,6 +75,12 @@ const char quit[] = "/quit";
 int acceptConnect(int listeningFD);
 int setup_listen(int portNum);
 int handleNini(int clientFD);
+void messageCreator(int type, char* source, char* data, char *serializedMessage);
+void testMessage(message test);
+int findIndex(char* username);
+int checkSessionExist(char *sessionName);
+int checkUserSession(char *sessionNameint, int indexPosition);
+
 
 //serialize messages function
 void serialize(message messagePacket, char* serialArr);
@@ -69,7 +88,13 @@ void serialize(message messagePacket, char* serialArr);
 //deserializing message function
 message deSerialize(char* serialArr);
 
+fd_set all_sockets, prepared_sockets;
+
 int main(int argc, char *argv[]){
+    // const char general[] = "general";
+    // printf("len of general is: %d\n", strlen(general));
+    // memset(list_of_users[0].sessionID, '\0', 31);
+    // memcpy(list_of_users[0].sessionID, general, 8);
 
     if (argc != 2){
         return 1;
@@ -78,7 +103,7 @@ int main(int argc, char *argv[]){
 
     int FileDescriptor = setup_listen(portNum);
 
-    fd_set all_sockets, prepared_sockets;
+    //fd_set all_sockets, prepared_sockets;
 
     //initialize sets
     FD_ZERO(&all_sockets);
@@ -152,6 +177,7 @@ int setup_listen(int portNum){
 int handleNini(int clientFD){
     //Creating the buffers right here
     char client_buffer[400] = {'\0'};
+    memset(client_buffer, '\0', 400);
     char server_response[400] = "login success";
     const char check[] = "login";
     const char delim[] = " ";
@@ -159,21 +185,25 @@ int handleNini(int clientFD){
 
     int numBytesRecv;
 
-    numBytesRecv = recv(clientFD, client_buffer, sizeof(client_buffer), 0);
-    if (numBytesRecv == 0){
-        printf("connect broken :(\n");
-        return -1;
-    }
+    numBytesRecv = recv(clientFD, client_buffer, 400, 0);
+    
+    // if (numBytesRecv == 0){
+    //     printf("connect broken :(\n");
+    //     //close(clientFD);
+    //     FD_CLR(clientFD, &all_sockets);
+    //     return -1;
+    // }
 
     message received_message = deSerialize(client_buffer);
 
-    printf("%d\n", received_message.type);
-    printf("&d\n", received_message.size);
-    printf("%s\n",received_message.source);
-    printf("%s\n",received_message.data);
+    //testing area
+    // received_message.type = NEW_SESS;
+    // strcpy(received_message.data, "general");
 
-    printf("string length in database: %d\n", strlen(list_of_users[0].clientID));
-    printf("string length of the sent message username: %d\n", strlen(received_message.source));
+    printf("received message type: %d\n", received_message.type);
+    printf("received message size: %d\n", received_message.size);
+    printf("received message source: %s\n",received_message.source);
+    printf("received message data: %s\n",received_message.data);
 
     if(received_message.type == LOGIN){
         printf("it is login command\n");
@@ -185,24 +215,169 @@ int handleNini(int clientFD){
             }
         }
         if(index == -1){
-            message reply_message;
-            reply_message.type = 3452;
-            reply_message.size = strlen("wrong username!");
-            strcpy(reply_message.source, "server");
-            memcpy(reply_message.data, "wrong username!", reply_message.size);
-            char serializedMessage[400] = {'\0'};
-            serialize(reply_message, serializedMessage);
-            message test = deSerialize(serializedMessage);
-            printf("test.source = %s\n", test.source);
-            printf("test.data = %s\n", test.data);
-            printf("test.size = %d\n", test.size);
-            if(send(clientFD, serializedMessage, strlen(serializedMessage), 0) < 0){
-                printf("The server failed at responding.");
+            char reply_message[400] = {'\0'};
+            messageCreator(LO_NACK, "server", "wrong username!", reply_message); 
+            testMessage(deSerialize(reply_message));
+            if(send(clientFD, reply_message, 400, 0) < 0){
+                printf("The server failed at responding.\n");
             }
             printf("username not valid\n");
         }else{
-            
+            if((strlen(list_of_users[index].password) != strlen(received_message.data)) && strcmp(list_of_users[index].password, received_message.data) != 0){
+                char reply_message[400] = {'\0'};
+                messageCreator(LO_NACK, "server", "wrong password!", reply_message); 
+                testMessage(deSerialize(reply_message));
+                if(send(clientFD, reply_message, 400, 0) < 0){
+                    printf("The server failed at responding.\n");
+                }
+                printf("wrong password!\n");
+            }
+            else{
+                list_of_users[index].online = 1;
+                list_of_users[index].socket = clientFD;
+                printf("online status: %d\n", list_of_users[index].online);
+                printf("socket number of user: %d\n", list_of_users[index].socket);
+                char reply_message[400] = {'\0'};
+                messageCreator(LO_ACK, "server", "", reply_message); 
+                testMessage(deSerialize(reply_message));
+                // message reply_message;
+                // reply_message.type = LO_ACK;
+                // reply_message.size = 0;
+                // char serializedMessage[400] = {'\0'};
+                // serialize(reply_message, serializedMessage);
+                if(send(clientFD, reply_message, 400, 0) < 0){
+                    printf("The server failed at responding.\n");
+                }
+                printf("successful login!\n");
+            }
         }
+    }
+
+    if(received_message.type == JOIN){
+        printf("It is the /joinsession command \n");
+        int index = findIndex(received_message.source);
+        // if((strlen(list_of_users[index].sessionID) + 1 != strlen(received_message.data)) && (strcmp(list_of_users[index].sessionID, received_message.data) != 0) && (checkSessionExist(received_message.data))){
+        if(checkSessionExist(received_message.data) && (checkUserSession(received_message.data, index) != 1)){
+            char reply_message[400] = {'\0'};
+            messageCreator(JN_ACK, "server", received_message.data, reply_message);
+            testMessage(deSerialize(reply_message));
+            if(send(clientFD, reply_message, 400, 0) < 0){
+               printf("The server failed at responding.");
+            }
+            strcpy(list_of_users[index].sessionID, received_message.data);
+            printf("the new joined session ID is: %s\n", list_of_users[index].sessionID);
+
+        }
+        else{
+            if(checkSessionExist(received_message.data) == 0){
+                char reply_message[400] = {'\0'};
+
+                char packet_data[MAX_DATA];
+                memset(packet_data, '\0', sizeof(packet_data));
+                strcpy(packet_data, received_message.data);
+                strcat(packet_data, ", The session ID does not exist!");
+                messageCreator(JN_NACK, "server", packet_data, reply_message);
+                testMessage(deSerialize(reply_message));
+                if(send(clientFD, reply_message, 400, 0) < 0){
+                    printf("The server failed at responding.\n");
+                }
+            }else{
+                char reply_message[400] = {'\0'};
+
+                char packet_data[MAX_DATA];
+                memset(packet_data, '\0', sizeof(packet_data));
+                strcpy(packet_data, received_message.data);
+                strcat(packet_data, ", already joined session!");
+                messageCreator(JN_NACK, "server", packet_data, reply_message);
+                testMessage(deSerialize(reply_message));
+                if(send(clientFD, reply_message, 400, 0) < 0){
+                    printf("The server failed at responding.\n");
+                }
+            }   
+        }
+    }
+    if(received_message.type == LEAVE_SESS){
+        printf("It is the /leavesession command \n");
+        int index = findIndex(received_message.source);
+        strcpy(list_of_users[index].sessionID, "null");
+        printf("user session is: %s\n", list_of_users[index].sessionID);
+    }
+    
+    if(received_message.type == NEW_SESS){
+        printf("It is the /createsession command\n");
+        int index = findIndex(received_message.source);
+        if(checkSessionExist(received_message.data) == 0){
+            number_of_sessions += 1;
+            strcpy(list_of_sessions[number_of_sessions-1].sessionID, received_message.data);
+            strcpy(list_of_users[index].sessionID, received_message.data);
+            printf("session in the list: %s\n", list_of_sessions[number_of_sessions-1].sessionID);
+            printf("session in user profile: %s\n", list_of_users[index].sessionID);
+            char reply_message[400] = {'\0'};
+            messageCreator(NS_ACK, "server", "", reply_message);
+            testMessage(deSerialize(reply_message));
+            if(send(clientFD, reply_message, 400, 0) < 0){
+                printf("The server failed at responding.\n");
+            }
+        }
+        else if(checkSessionExist(received_message.data) == 1){
+            printf("this session already exists\n");
+        }
+    }
+
+    if(received_message.type == MESSAGE){
+        printf("server is now dealing with messaging services\n");
+        int index = findIndex(received_message.source);
+        for(int i = 0; i<4; i++){
+            if(i != index){
+                printf("it get here\n");
+                printf("Name of user: %s, checkUserSession = %d, online? = %d\n", list_of_users[i].clientID, checkUserSession(list_of_users[index].sessionID, i), list_of_users[i].online);
+                if(checkUserSession(list_of_users[index].sessionID, i) && (list_of_users[i].online == 1)){
+                    printf("this is the second part\n");
+                    char reply_message[400];
+                    memset(reply_message, '\0', 400);
+                    messageCreator(MESSAGE, "server", received_message.data, reply_message);
+                    testMessage(deSerialize(reply_message));
+                    printf("testing raw string: %d %d\n", *reply_message, *(reply_message + sizeof(unsigned int)));
+                    if(send(list_of_users[i].socket, reply_message, 400, 0) < 0){
+                        printf("The server failed at responding.\n");
+                    }
+                }
+            }
+        }
+    }
+
+    if(received_message.type == QUERY){
+        printf("server is now dealing with /list command\n");
+        char reply_message[400] = {'\0'};
+        char packet_data[MAX_DATA];
+        memset(packet_data, '\0', sizeof(packet_data));
+        strcpy(packet_data, "Clients: ");
+        for(int i = 0; i<4; i++){
+            if(list_of_users[i].online){
+                strcat(packet_data, list_of_users[i].clientID);
+                strcat(packet_data, " ");
+            }
+        }
+        strcat(packet_data, "Sessions: ");
+        for(int i = 0; i<number_of_sessions; i++){
+            strcat(packet_data, list_of_sessions[i].sessionID);
+            strcat(packet_data, " ");
+        }
+        
+        messageCreator(QU_ACK, "server", packet_data, reply_message);
+        testMessage(deSerialize(reply_message));
+        if(send(clientFD, reply_message, 400, 0) < 0){
+            printf("The server failed at responding.\n");
+        }
+    }
+
+    if(received_message.type == EXIT){
+        int index = findIndex(received_message.source);
+        list_of_users[index].online = 0;
+        list_of_users[index].socket = -1;
+        printf("man's been logged out \n");
+        //close(clientFD);
+        FD_CLR(clientFD, &all_sockets);
     }
     //firstword = strtok(client_buffer, delim);
 
@@ -242,4 +417,60 @@ message deSerialize(char* serialArr){
 	memcpy(&toReturn.data, serialArr + 2*sizeof(unsigned int) + MAX_NAME*sizeof(unsigned char), toReturn.size);
 
     return toReturn;
+}
+
+void messageCreator(int type, char* source, char* data, char *serializedMessage){
+    message reply;
+    reply.type = type;
+    reply.size = strlen(data);
+    strcpy(reply.source, source);
+    memcpy(reply.data, data, reply.size);
+    serialize(reply, serializedMessage);
+}
+
+void testMessage(message test){
+    printf("test.type = %d\n", test.type);
+    printf("test.size = %d\n", test.size);
+    printf("test.source = %s\n", test.source);
+    printf("test.data = %s\n", test.data);
+}
+
+int findIndex(char* username){
+    int result = -1;
+    for(int i = 0; i<4; i++){
+        if(strcmp(username, list_of_users[i].clientID) == 0){
+            result = i;
+        }
+    }
+    return result;
+}
+
+int checkSessionExist(char *sessionName){
+    int result = 0;
+    for(int i = 0; i < number_of_sessions; i++){
+        char *ret;
+        ret = strstr(sessionName, list_of_sessions[i].sessionID);
+        if(ret != NULL && (strlen(list_of_sessions[i].sessionID)+1 == strlen(sessionName))){
+            result = 1;
+        }else if(ret != NULL && (strlen(list_of_sessions[i].sessionID) == strlen(sessionName))){
+            result = 1;
+        }
+    }
+    // printf("checkSessionExist function is being called:\n");
+    // printf("the string received is: %s and the length is %d\n", sessionName, strlen(sessionName));
+    // printf("the string in database is: %s and the length is %d\n", list_of_sessions[1].sessionID, strlen(list_of_sessions[1].sessionID));
+    return result;
+}
+
+int checkUserSession(char *sessionName, int indexPosition){
+    int result = 0;
+    char *ret;
+    ret = strstr(sessionName, list_of_users[indexPosition].sessionID);
+    if(ret != NULL && (strlen(list_of_users[indexPosition].sessionID)+1 == strlen(sessionName))){
+        result = 1;
+    }
+    else if(ret != NULL && (strlen(list_of_users[indexPosition].sessionID) == strlen(sessionName))){
+        result = 1;
+    }
+    return result;
 }
