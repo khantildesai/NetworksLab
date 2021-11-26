@@ -80,6 +80,7 @@ void testMessage(message test);
 int findIndex(char* username);
 int checkSessionExist(char *sessionName);
 int checkUserSession(char *sessionNameint, int indexPosition);
+int checkPassword(char *fromClient, int indexPosition);
 
 
 //serialize messages function
@@ -176,8 +177,8 @@ int setup_listen(int portNum){
 
 int handleNini(int clientFD){
     //Creating the buffers right here
-    char client_buffer[400] = {'\0'};
-    memset(client_buffer, '\0', 400);
+    char client_buffer[400];
+    memset(client_buffer, '\0', sizeof(client_buffer));
     char server_response[400] = "login success";
     const char check[] = "login";
     const char delim[] = " ";
@@ -215,7 +216,8 @@ int handleNini(int clientFD){
             }
         }
         if(index == -1){
-            char reply_message[400] = {'\0'};
+            char reply_message[400];
+            memset(reply_message, '\0', sizeof(reply_message));
             messageCreator(LO_NACK, "server", "wrong username!", reply_message); 
             testMessage(deSerialize(reply_message));
             if(send(clientFD, reply_message, 400, 0) < 0){
@@ -223,8 +225,10 @@ int handleNini(int clientFD){
             }
             printf("username not valid\n");
         }else{
-            if((strlen(list_of_users[index].password) != strlen(received_message.data)) && strcmp(list_of_users[index].password, received_message.data) != 0){
-                char reply_message[400] = {'\0'};
+            // if((strlen(list_of_users[index].password) != strlen(received_message.data)) && strcmp(list_of_users[index].password, received_message.data) != 0){
+                if(checkPassword(received_message.data, index) == 0){
+                char reply_message[400];
+                memset(reply_message, '\0', sizeof(reply_message));
                 messageCreator(LO_NACK, "server", "wrong password!", reply_message); 
                 testMessage(deSerialize(reply_message));
                 if(send(clientFD, reply_message, 400, 0) < 0){
@@ -237,7 +241,8 @@ int handleNini(int clientFD){
                 list_of_users[index].socket = clientFD;
                 printf("online status: %d\n", list_of_users[index].online);
                 printf("socket number of user: %d\n", list_of_users[index].socket);
-                char reply_message[400] = {'\0'};
+                char reply_message[400];
+                memset(reply_message, '\0', sizeof(reply_message));
                 messageCreator(LO_ACK, "server", "", reply_message); 
                 testMessage(deSerialize(reply_message));
                 // message reply_message;
@@ -258,7 +263,8 @@ int handleNini(int clientFD){
         int index = findIndex(received_message.source);
         // if((strlen(list_of_users[index].sessionID) + 1 != strlen(received_message.data)) && (strcmp(list_of_users[index].sessionID, received_message.data) != 0) && (checkSessionExist(received_message.data))){
         if(checkSessionExist(received_message.data) && (checkUserSession(received_message.data, index) != 1)){
-            char reply_message[400] = {'\0'};
+            char reply_message[400];
+            memset(reply_message, '\0', sizeof(reply_message));
             messageCreator(JN_ACK, "server", received_message.data, reply_message);
             testMessage(deSerialize(reply_message));
             if(send(clientFD, reply_message, 400, 0) < 0){
@@ -270,7 +276,8 @@ int handleNini(int clientFD){
         }
         else{
             if(checkSessionExist(received_message.data) == 0){
-                char reply_message[400] = {'\0'};
+                char reply_message[400];
+                memset(reply_message, '\0', sizeof(reply_message));
 
                 char packet_data[MAX_DATA];
                 memset(packet_data, '\0', sizeof(packet_data));
@@ -282,7 +289,8 @@ int handleNini(int clientFD){
                     printf("The server failed at responding.\n");
                 }
             }else{
-                char reply_message[400] = {'\0'};
+                char reply_message[400];
+                memset(reply_message, '\0', sizeof(reply_message));
 
                 char packet_data[MAX_DATA];
                 memset(packet_data, '\0', sizeof(packet_data));
@@ -312,7 +320,8 @@ int handleNini(int clientFD){
             strcpy(list_of_users[index].sessionID, received_message.data);
             printf("session in the list: %s\n", list_of_sessions[number_of_sessions-1].sessionID);
             printf("session in user profile: %s\n", list_of_users[index].sessionID);
-            char reply_message[400] = {'\0'};
+            char reply_message[400];
+            memset(reply_message, '\0', sizeof(reply_message));
             messageCreator(NS_ACK, "server", "", reply_message);
             testMessage(deSerialize(reply_message));
             if(send(clientFD, reply_message, 400, 0) < 0){
@@ -335,7 +344,7 @@ int handleNini(int clientFD){
                     printf("this is the second part\n");
                     char reply_message[400];
                     memset(reply_message, '\0', 400);
-                    messageCreator(MESSAGE, "server", received_message.data, reply_message);
+                    messageCreator(MESSAGE, list_of_users[index].clientID, received_message.data, reply_message);
                     testMessage(deSerialize(reply_message));
                     printf("testing raw string: %d %d\n", *reply_message, *(reply_message + sizeof(unsigned int)));
                     if(send(list_of_users[i].socket, reply_message, 400, 0) < 0){
@@ -348,7 +357,8 @@ int handleNini(int clientFD){
 
     if(received_message.type == QUERY){
         printf("server is now dealing with /list command\n");
-        char reply_message[400] = {'\0'};
+        char reply_message[400];
+        memset(reply_message, '\0', sizeof(reply_message));
         char packet_data[MAX_DATA];
         memset(packet_data, '\0', sizeof(packet_data));
         strcpy(packet_data, "Clients: ");
@@ -403,6 +413,8 @@ void serialize(message messagePacket, char* serialArr){
 message deSerialize(char* serialArr){
 	//packet to return
 	message toReturn;
+    memset(toReturn.source, '\0', 31);
+	memset(toReturn.data, '\0', 301);
 
 	//type
 	memcpy(&toReturn.type, serialArr, sizeof(unsigned int));
@@ -473,4 +485,17 @@ int checkUserSession(char *sessionName, int indexPosition){
         result = 1;
     }
     return result;
+}
+
+int checkPassword(char *fromClient, int indexPosition){
+    int result = 0;
+    char *ret;
+    ret = strstr(fromClient, list_of_users[indexPosition].password);
+    if(ret != NULL && (strlen(list_of_users[indexPosition].password)+1 == strlen(fromClient))){
+        result = 1;
+    }
+    else if(ret != NULL && (strlen(list_of_users[indexPosition].password) == strlen(fromClient))){
+        result = 1;
+    }
+    return result; 
 }
