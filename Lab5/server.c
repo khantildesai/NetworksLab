@@ -63,7 +63,7 @@ user list_of_users[4] = {{"Joel", "0000", "general", 0, -1}, {"Khantil", "1234",
 
 int number_of_sessions = 2;
 
-session list_of_sessions[10] = {{"general", ""}, {"helloworld", ""}};
+session list_of_sessions[10] = {{"general", "no admin"}, {"helloworld", "no admin"}};
 
 
 //keywords for commands
@@ -321,6 +321,7 @@ int handleNini(int clientFD){
         if(checkSessionExist(received_message.data) == 0){
             number_of_sessions += 1;
             strcpy(list_of_sessions[number_of_sessions-1].sessionID, received_message.data);
+            strcpy(list_of_sessions[number_of_sessions-1].admin, received_message.source);
             strcpy(list_of_users[index].sessionID, received_message.data);
             printf("session in the list: %s\n", list_of_sessions[number_of_sessions-1].sessionID);
             printf("session in user profile: %s\n", list_of_users[index].sessionID);
@@ -375,7 +376,8 @@ int handleNini(int clientFD){
         strcat(packet_data, "Sessions: ");
         for(int i = 0; i<number_of_sessions; i++){
             strcat(packet_data, list_of_sessions[i].sessionID);
-            strcat(packet_data, " ");
+            strcat(packet_data, ": ");
+            strcat(packet_data, list_of_sessions[i].admin);
         }
         
         messageCreator(QU_ACK, "server", packet_data, reply_message);
@@ -414,7 +416,7 @@ int handleNini(int clientFD){
         else{
             char reply_message[400];
             memset(reply_message, '\0', sizeof(reply_message));
-            messageCreator(PM_ACK, list_of_users[sourceIndex].clientID, received_message.data, reply_message);
+            messageCreator(PM, list_of_users[sourceIndex].clientID, received_message.data, reply_message);
             testMessage(deSerialize(reply_message));
             if(send(list_of_users[receipientIndex].socket, reply_message, 400, 0) < 0){
                 printf("The server failed at responding.\n");
@@ -457,6 +459,37 @@ int handleNini(int clientFD){
             if(send(clientFD, reply_message, 400, 0) < 0){
                 printf("The server failed at responding.\n");
             }
+        }
+    }
+
+    if(received_message.type == PASS_ACK){
+        int index_of_session = -1;
+        int index = findIndex(received_message.data);
+        for(int i = 0; i < number_of_sessions; i++){
+            if(verifyAdmin(received_message.source, i)){
+                index_of_session = i;
+            }
+        }
+        if(index_of_session == -1){
+            char reply_message[400];
+            memset(reply_message, '\0', sizeof(reply_message));
+            messageCreator(PASS_ACK, "server", "You are not an admin!", reply_message); 
+            testMessage(deSerialize(reply_message));
+            if(send(clientFD, reply_message, 400, 0) < 0){
+                printf("The server failed at responding.\n");
+            }
+        }
+        else if(checkUserSession(list_of_sessions[index_of_session].sessionID, index) == 0){
+            char reply_message[400];
+            memset(reply_message, '\0', sizeof(reply_message));
+            messageCreator(PASS_ACK, "server", "You are an admin but can't make other admins from other sessions", reply_message); 
+            testMessage(deSerialize(reply_message));
+            if(send(clientFD, reply_message, 400, 0) < 0){
+                printf("The server failed at responding.\n");
+            }
+        }
+        else{
+            strcpy(list_of_sessions[index_of_session].admin, received_message.data);
         }
     }
     //firstword = strtok(client_buffer, delim);
