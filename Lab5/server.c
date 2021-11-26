@@ -414,7 +414,7 @@ int handleNini(int clientFD){
         else{
             char reply_message[400];
             memset(reply_message, '\0', sizeof(reply_message));
-            messageCreator(PM_ACK, list_of_users[sourceIndex].clientID, received_message.data, reply_message);
+            messageCreator(PM, list_of_users[sourceIndex].clientID, received_message.data, reply_message);
             testMessage(deSerialize(reply_message));
             if(send(list_of_users[receipientIndex].socket, reply_message, 400, 0) < 0){
                 printf("The server failed at responding.\n");
