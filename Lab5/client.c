@@ -29,6 +29,12 @@
 #define MESSAGE 10
 #define QUERY 11
 #define QU_ACK 12
+#define PM 13
+#define KICK 14
+#define PASS 15
+#define PM_ACK 16
+#define KICK_ACK 17
+#define PASS_ACK 18
 
 int serverFD;
 char* myClientID[31] = {'\0'};
@@ -41,6 +47,9 @@ const char leavesession[] = "/leavesession";
 const char createsession[] = "/createsession";
 const char list[] = "/list";
 const char quit[] = "/quit";
+const char pm[] = "/pm";
+const char kick[] = "/kick";
+const char pass[] = "pass";
 
 //delimeter for parsing command
 const char delim[] = " ";
@@ -96,6 +105,15 @@ int makeQueryMessage(char* totalCommand);
 //make message struct
 int makeMessage(char* totalCommand);
 
+//make pm message struct
+int makePmMessage(char* totalCommand);
+
+//make kick message struct
+int makeKickMessage(char* totalCommand);
+
+//make pass message struct
+int makePassMessage(char* totalCommand);
+
 //handle messages from server
 int handle(message fromServer);
 
@@ -119,6 +137,18 @@ int receivedNSAck(message fromServer);
 
 //handle message
 int receivedMessage(message fromServer);
+
+//handle pm ack message
+int receivedPmAck(message fromServer);
+
+//handle kick ack message
+int receivedKickAck(message fromServer);
+
+//handle pass ack message
+int receivedPassAck(message fromServer);
+
+//handle pacc message
+int receivedPM(message fromServer);
 
 //quit function
 int sendQuit(void);
@@ -228,6 +258,21 @@ int validInput(char* command, char* totalCommand){
 	else if (strcmp(command, list) == 0){
 		if ((loggedIn == 1) && inSession == 1){ 
 			if (makeQueryMessage(totalCommand) != 0){ return -1; }
+			return 0; }
+		else { return -1; }}
+	else if (strcmp(command, pm) == 0){
+		if ((loggedIn == 1)){ 
+			if (makePmMessage(totalCommand) != 0){ return -1; }
+			return 0; }
+		else { return -1; }}
+	else if (strcmp(command, kick) == 0){
+		if ((loggedIn == 1)){ 
+			if (makeKickMessage(totalCommand) != 0){ return -1; }
+			return 0; }
+		else { return -1; }}
+	else if (strcmp(command, pass) == 0){
+		if ((loggedIn == 1)){ 
+			if (makePassMessage(totalCommand) != 0){ return -1; }
 			return 0; }
 		else { return -1; }}
 	else if (strcmp(command, quit) == 0){
@@ -509,6 +554,94 @@ int makeMessage(char* totalCommand){
 	return 0;
 }
 
+//make pm message struct
+int makePmMessage(char* totalCommand){
+	//get who to send to
+	char *target = strtok(NULL, delim);
+
+	//ensure proper parameters
+	if (target == NULL){printf("Invalid PM Parameters!");}
+
+	message packetMessage;
+	memset(packetMessage.source, '\0', 31);
+	memset(packetMessage.data, '\0', 301);
+
+	packetMessage.type = PM;
+	memcpy(packetMessage.source, target, 31);
+	memcpy(packetMessage.data, totalCommand, 301);
+	packetMessage.size = 301;
+
+	//serialize
+	char serializedMessage[400] = {"\0"};
+	serialize(packetMessage, serializedMessage);
+
+	//Sending the message nini to server
+	if(send(serverFD, serializedMessage, 400, 0) < 0){
+		printf("There was an error in sending\n");
+		return -1;
+	}
+	//printf("sent joinsession message to server\n");
+	return 0;
+}
+
+int makeKickMessage(char* totalCommand){
+	//get who to send to
+	char *target = strtok(NULL, delim);
+
+	//ensure proper parameters
+	if (target == NULL){printf("Invalid PM Parameters!");}
+
+	message packetMessage;
+	memset(packetMessage.source, '\0', 31);
+	memset(packetMessage.data, '\0', 301);
+
+	packetMessage.type = KICK;
+	memcpy(packetMessage.source, myClientID, 31);
+	memcpy(packetMessage.data, target, 301);
+	packetMessage.size = 301;
+
+	//serialize
+	char serializedMessage[400] = {"\0"};
+	serialize(packetMessage, serializedMessage);
+
+	//Sending the message nini to server
+	if(send(serverFD, serializedMessage, 400, 0) < 0){
+		printf("There was an error in sending\n");
+		return -1;
+	}
+	//printf("sent joinsession message to server\n");
+	return 0;
+}
+
+int makePassMessage(char* totalCommand){
+	//get who to send to
+	char *target = strtok(NULL, delim);
+
+	//ensure proper parameters
+	if (target == NULL){printf("Invalid PM Parameters!");}
+
+	message packetMessage;
+	memset(packetMessage.source, '\0', 31);
+	memset(packetMessage.data, '\0', 301);
+
+	packetMessage.type = PASS;
+	memcpy(packetMessage.source, myClientID, 31);
+	memcpy(packetMessage.data, target, 301);
+	packetMessage.size = 301;
+
+	//serialize
+	char serializedMessage[400] = {"\0"};
+	serialize(packetMessage, serializedMessage);
+
+	//Sending the message nini to server
+	if(send(serverFD, serializedMessage, 400, 0) < 0){
+		printf("There was an error in sending\n");
+		return -1;
+	}
+	//printf("sent joinsession message to server\n");
+	return 0;
+}
+
 int sendQuit(void){
 //create message packet struct
 	message packetMessage;
@@ -566,6 +699,22 @@ int handle(message fromServer){
 	case MESSAGE:
 		ok = receivedMessage(fromServer);
 		break;
+
+	case PM:
+		ok = receivedPM(fromServer);
+		break;
+
+	case PM_ACK:
+		ok = receivedPmAck(fromServer);
+		break;
+
+	case KICK_ACK:
+		ok = receivedKickAck(fromServer);
+		break;
+
+	case PASS_ACK:
+		ok = receivedPassAck(fromServer);
+		break;
 	
 	default:
 		printf("Client shouldn't recieved this packets!\n");
@@ -610,4 +759,27 @@ int receivedQAck(message fromServer){
 int receivedMessage(message fromServer){
 	printf("%s: %s\n", fromServer.source, fromServer.data);
 	return 0;
+}
+
+//handle pm ack message
+int receivedPmAck(message fromServer){
+	printf("%s\n", fromServer.data);
+	return 0;
+}
+
+//handle kick ack message
+int receivedKickAck(message fromServer){
+	printf("%s\n", fromServer.data);
+	return 0;
+}
+
+//handle pass ack message
+int receivedPassAck(message fromServer){
+	printf("%s\n", fromServer.data);
+	return 0;
+}
+
+//handle pm message
+int receivedPM(message fromServer){
+	printf("PRIVATE: %s %s\n", fromServer.source, fromServer.data);
 }
