@@ -49,7 +49,7 @@ const char list[] = "/list";
 const char quit[] = "/quit";
 const char pm[] = "/pm";
 const char kick[] = "/kick";
-const char pass[] = "pass";
+const char pass[] = "/pass";
 
 //delimeter for parsing command
 const char delim[] = " ";
@@ -351,7 +351,7 @@ int connectToServer(int portNum, int ip){
 
 int makeLoginMessage(char* totalCommand){
 	int valid = 0; //0 = valid
-	
+
 	int words = stringwordcount(totalCommand);
 	if (words  != 5){printf("command too short!\n"); return -1;}
 
