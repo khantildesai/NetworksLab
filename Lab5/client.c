@@ -558,9 +558,11 @@ int makeMessage(char* totalCommand){
 int makePmMessage(char* totalCommand){
 	//get who to send to
 	char *target = strtok(NULL, delim);
+	char *text = strtok(NULL, delim);
 
 	//ensure proper parameters
 	if (target == NULL){printf("Invalid PM Parameters!");}
+	if (text == NULL){printf("Invalid PM Parameters!");}
 
 	message packetMessage;
 	memset(packetMessage.source, '\0', 31);
@@ -568,7 +570,7 @@ int makePmMessage(char* totalCommand){
 
 	packetMessage.type = PM;
 	memcpy(packetMessage.source, target, 31);
-	memcpy(packetMessage.data, totalCommand, 301);
+	memcpy(packetMessage.data, text, 301);
 	packetMessage.size = 301;
 
 	//serialize
@@ -769,6 +771,7 @@ int receivedPmAck(message fromServer){
 
 //handle kick ack message
 int receivedKickAck(message fromServer){
+	inSession = -1;
 	printf("%s\n", fromServer.data);
 	return 0;
 }
@@ -781,5 +784,5 @@ int receivedPassAck(message fromServer){
 
 //handle pm message
 int receivedPM(message fromServer){
-	printf("PRIVATE: %s %s\n", fromServer.source, fromServer.data);
+	printf("PRIVATE: %s: %s\n", fromServer.source, fromServer.data);
 }
