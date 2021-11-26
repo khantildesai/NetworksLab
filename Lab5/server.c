@@ -192,12 +192,12 @@ int handleNini(int clientFD){
 
     numBytesRecv = recv(clientFD, client_buffer, 400, 0);
     
-    // if (numBytesRecv == 0){
-    //     printf("connect broken :(\n");
-    //     //close(clientFD);
-    //     FD_CLR(clientFD, &all_sockets);
-    //     return -1;
-    // }
+    if (numBytesRecv == 0){
+        printf("connect broken :(\n");
+         //close(clientFD);
+         FD_CLR(clientFD, &all_sockets);
+         return -1;
+    }
 
     message received_message = deSerialize(client_buffer);
 

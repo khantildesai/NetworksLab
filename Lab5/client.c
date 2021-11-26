@@ -391,7 +391,16 @@ int makeLoginMessage(char* totalCommand){
 
 //make logout struct
 int makeLogoutMessage(char* totalCommand){
-	close(serverFD);
+	message packetMessage;
+	memset(packetMessage.source, '\0', 31);
+	memset(packetMessage.data, '\0', 301);
+
+	packetMessage.type = EXIT;
+	memcpy(packetMessage.source, myClientID, 31);
+	//memcpy(packetMessage.data, sessionID, strlen(sessionID));
+	//packetMessage.size = strlen(packetMessage.data);
+
+	FD_CLR(serverFD, &all_sockets);
 	loggedIn = -1;
 	return -15;
 }
