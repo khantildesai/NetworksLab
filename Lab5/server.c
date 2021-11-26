@@ -24,9 +24,12 @@
 #define MESSAGE 10
 #define QUERY 11
 #define QU_ACK 12
-#define NEW_ACC 13
-#define NEW_ACC_ACK 14
-#define NEW_ACC_NACK 15
+#define PM 13
+#define KICK 14
+#define PASS 15
+#define PM_ACK 16
+#define KICK_ACK 17
+#define PASS_ACK 18
 
 #define COMMANDINPUTSIZE 301 //command line input size
 
@@ -81,6 +84,7 @@ int findIndex(char* username);
 int checkSessionExist(char *sessionName);
 int checkUserSession(char *sessionNameint, int indexPosition);
 int checkPassword(char *fromClient, int indexPosition);
+int verifyAdmin(char *clientName, int indexPosition);
 
 
 //serialize messages function
@@ -389,6 +393,72 @@ int handleNini(int clientFD){
         //close(clientFD);
         FD_CLR(clientFD, &all_sockets);
     }
+
+    if(received_message.type == PM){
+        int receipientIndex = findIndex(received_message.source);
+        int sourceIndex;
+        for(int i = 0; i<4; i++){
+            if(clientFD == list_of_users[i].socket){
+                sourceIndex = i;
+            }
+        }
+        if(list_of_users[receipientIndex].online == 0){
+            char reply_message[400];
+            memset(reply_message, '\0', sizeof(reply_message));
+            messageCreator(PM_ACK, "server", "the receiving user is not online", reply_message); 
+            testMessage(deSerialize(reply_message));
+            if(send(clientFD, reply_message, 400, 0) < 0){
+                printf("The server failed at responding.\n");
+            }
+        }
+        else{
+            char reply_message[400];
+            memset(reply_message, '\0', sizeof(reply_message));
+            messageCreator(PM_ACK, list_of_users[sourceIndex].clientID, received_message.data, reply_message);
+            testMessage(deSerialize(reply_message));
+            if(send(list_of_users[receipientIndex].socket, reply_message, 400, 0) < 0){
+                printf("The server failed at responding.\n");
+            }
+        }
+    }
+
+    if(received_message.type == KICK){
+        int index_of_session = -1;
+        int index = findIndex(received_message.data);
+        for(int i = 0; i < number_of_sessions; i++){
+            if(verifyAdmin(received_message.source, i)){
+                index_of_session = i;
+            }
+        }
+        if(index_of_session == -1){
+            char reply_message[400];
+            memset(reply_message, '\0', sizeof(reply_message));
+            messageCreator(KICK_ACK, "server", "You are not an admin!", reply_message); 
+            testMessage(deSerialize(reply_message));
+            if(send(clientFD, reply_message, 400, 0) < 0){
+                printf("The server failed at responding.\n");
+            }
+        }
+        else if(checkUserSession(list_of_sessions[index_of_session].sessionID, index) == 0){
+            char reply_message[400];
+            memset(reply_message, '\0', sizeof(reply_message));
+            messageCreator(KICK_ACK, "server", "You are an admin but can't kick people in other sessions", reply_message); 
+            testMessage(deSerialize(reply_message));
+            if(send(clientFD, reply_message, 400, 0) < 0){
+                printf("The server failed at responding.\n");
+            }
+        }
+        else{
+            strcpy(list_of_users[index].sessionID, "null");
+            char reply_message[400];
+            memset(reply_message, '\0', sizeof(reply_message));
+            messageCreator(KICK_ACK, "server", "The user has been kicked from the session!", reply_message); 
+            testMessage(deSerialize(reply_message));
+            if(send(clientFD, reply_message, 400, 0) < 0){
+                printf("The server failed at responding.\n");
+            }
+        }
+    }
     //firstword = strtok(client_buffer, delim);
 
     //if(strcmp(firstword, check) == 0){
@@ -498,4 +568,17 @@ int checkPassword(char *fromClient, int indexPosition){
         result = 1;
     }
     return result; 
+}
+
+int verifyAdmin(char *clientName, int indexPosition){
+    int result = 0;
+    char *ret;
+    ret = strstr(clientName, list_of_sessions[indexPosition].admin);
+    if(ret != NULL && (strlen(list_of_sessions[indexPosition].admin)+1 == strlen(clientName))){
+        result = 1;
+    }
+    else if(ret != NULL && (strlen(list_of_sessions[indexPosition].admin) == strlen(clientName))){
+        result = 1;
+    }
+    return result;
 }
