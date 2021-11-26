@@ -156,6 +156,21 @@ int sendQuit(void);
 fd_set all_sockets;
 fd_set prepared_sockets;
 
+int stringwordcount(char *s)
+{
+    int i,words=0;
+	for(i=0;s[i];i++)  
+    {
+    	if(s[i]==32)
+    	 words++;
+ 
+ 	}
+ 	if(i>0)
+      words++;
+	  
+	return words; 	
+}
+
 int main(void){
 	//int FileDescriptor = connectToServer(5000);
 
@@ -336,6 +351,9 @@ int connectToServer(int portNum, int ip){
 
 int makeLoginMessage(char* totalCommand){
 	int valid = 0; //0 = valid
+	
+	int words = stringwordcount(totalCommand);
+	if (words  != 5){printf("command too short!\n"); return -1;}
 
 	//get login parameters
 	char *clientID = strtok(NULL, delim); 
