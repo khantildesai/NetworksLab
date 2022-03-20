@@ -1,2 +1,3 @@
 # NetworksLab
 ECE361 Lab with Khantil Desai and Joel Biju Thomas
+COPYING THIS CODE IS AN ACADEMIC OFFENSE, YOU HAVE BEEN WARNED!
